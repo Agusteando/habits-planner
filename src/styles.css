@@ -788,3 +788,53 @@
   .slot-beam.axis-beam .beam-aura{width:22px}
   .slot-beam.axis-beam .beam-sparks{left:10px;width:18px}
 }
+
+/* v24 always-visible beam */
+.time-kanban-cell.beam-row{overflow:visible}
+.slot-beam.axis-beam{
+  opacity:1;
+  left:8px;
+  width:28px;
+  z-index:8;
+  mix-blend-mode:screen;
+}
+.slot-beam.axis-beam .beam-core{
+  width:26px;
+  height:2px;
+  background:linear-gradient(90deg, rgba(103,232,249,.25), rgba(103,232,249,1) 60%, rgba(255,255,255,.98) 100%);
+  box-shadow:0 0 18px rgba(103,232,249,.58), 0 0 32px rgba(103,232,249,.28), 0 0 6px rgba(255,255,255,.28);
+}
+.slot-beam.axis-beam .beam-aura{
+  left:-4px;
+  width:34px;
+  height:12px;
+  opacity:1;
+  background:radial-gradient(circle at 88% 50%, rgba(255,255,255,.55), transparent 18%), linear-gradient(90deg, rgba(103,232,249,0), rgba(103,232,249,.24), rgba(103,232,249,0));
+  filter:blur(3px);
+}
+.slot-beam.axis-beam .beam-sparks{
+  left:16px;
+  top:-12px;
+  width:26px;
+  height:26px;
+  opacity:1;
+}
+.slot-beam.axis-beam.has-target .beam-core{width:26px}
+.slot-beam.axis-beam.no-target .beam-core{width:34px}
+.slot-beam.axis-beam.no-target .beam-aura{width:40px}
+.slot-beam.axis-beam.no-target .beam-sparks{left:24px}
+.time-drop.beam-target{
+  border-color:rgba(103,232,249,.22);
+  color:rgba(103,232,249,.66);
+  background:linear-gradient(135deg, rgba(103,232,249,.06), rgba(255,255,255,.02));
+  box-shadow:inset 0 0 0 1px rgba(103,232,249,.05);
+}
+@media (max-width:680px){
+  .slot-beam.axis-beam{left:7px;width:24px}
+  .slot-beam.axis-beam .beam-core{width:22px}
+  .slot-beam.axis-beam .beam-aura{width:30px}
+  .slot-beam.axis-beam .beam-sparks{left:13px;width:22px}
+  .slot-beam.axis-beam.no-target .beam-core{width:28px}
+  .slot-beam.axis-beam.no-target .beam-aura{width:34px}
+  .slot-beam.axis-beam.no-target .beam-sparks{left:18px}
+}
