@@ -1,13 +1,14 @@
-# Habit Planner RPG v12
+# Habit Planner RPG v13
 
-Updates in this pass:
+Correction in this pass:
 
-- Action Bank items can now be removed without breaking existing planned blocks.
-- Removal is non-destructive: actions disappear from the Action Bank, while blocks already placed on the board still render and work.
-- Action Bank Options includes Manage, Export, Import, Template, and Restore removed actions when applicable.
-- The top More menu now renders above the planner instead of behind the board.
-- Dark/light theme switching is available from More and persists with the plan.
-- Existing import/export/template behavior is preserved.
+- Removed the action-hiding behavior entirely.
+- Action Bank Manage now performs destructive deletion.
+- Deleting an action removes it from the Action Bank and removes any planned blocks that referenced it.
+- There is no Restore removed actions flow because deletion is destructive.
+- Existing import/export/template behavior remains.
+- Dark/light theme switching remains.
+- The top More menu layering fix remains.
 - package-lock.json is intentionally excluded.
 
 Run:
@@ -17,8 +18,8 @@ npm install
 npm run dev
 ```
 
-Storage migrates from `habit-planner-rpg-v11` when available and persists to:
+Storage migrates from v12/v11 when available and persists to:
 
 ```txt
-habit-planner-rpg-v12
+habit-planner-rpg-v13
 ```
