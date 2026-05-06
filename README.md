@@ -1,18 +1,14 @@
-# Habit Planner RPG v11
+# Habit Planner RPG v12
 
-Complete single-file React implementation focused on the requested UX:
+Updates in this pass:
 
-- Per-day sealing. Each day can be sealed independently; sealed days reject edits unless a Review window is open.
-- Week navigation with real calendar dates.
-- Current day is highlighted. Past days are grayed out and can be hidden for the current week.
-- Day columns scroll vertically when many blocks are stacked.
-- The board stays a horizontal one-row Kanban and scrolls sideways when needed.
-- Block cards are larger and wrap text so titles/tier labels are readable.
-- Action Bank search, hidden import/export/template options, and real custom action creation.
-- Plan import/export hidden under a compact top menu.
-- Full wipe resets XP/levels/plan/seals and increments reset count.
-- Review blocks and Review Gate are real timed edit flows.
-- Pause blocks pause the rest of a day.
+- Action Bank items can now be removed without breaking existing planned blocks.
+- Removal is non-destructive: actions disappear from the Action Bank, while blocks already placed on the board still render and work.
+- Action Bank Options includes Manage, Export, Import, Template, and Restore removed actions when applicable.
+- The top More menu now renders above the planner instead of behind the board.
+- Dark/light theme switching is available from More and persists with the plan.
+- Existing import/export/template behavior is preserved.
+- package-lock.json is intentionally excluded.
 
 Run:
 
@@ -21,4 +17,8 @@ npm install
 npm run dev
 ```
 
-Storage key: `habit-planner-rpg-v11`
+Storage migrates from `habit-planner-rpg-v11` when available and persists to:
+
+```txt
+habit-planner-rpg-v12
+```
