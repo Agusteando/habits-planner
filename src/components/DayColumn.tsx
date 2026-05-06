@@ -1,38 +1,50 @@
-import { CSSProperties } from "react";
-import { dayLabel, getDayBlocks, shortDayLabel } from "../domain/rules";
+import type { CSSProperties } from "react";
+import { getDayBlocks, shortDayLabel } from "../domain/rules";
 import { DayKey } from "../domain/types";
-import { usePlanner } from "../state/PlannerContext";
+import { usePlanner } from "../state/plannerStore";
 import { BlockCard } from "./BlockCard";
 
-export function DayColumn({ day, mobile = false }: { day: DayKey; mobile?: boolean }) {
-  const { blocks, tasks, setSelectedDay, setInventoryOpen } = usePlanner();
-  const dayBlocks = getDayBlocks(blocks, day);
-  const done = dayBlocks.filter((block) => block.status === "done").length;
-  const progress = done / Math.max(1, dayBlocks.length);
+export function DayColumn({ day }: { day: DayKey }) {
+  const { state, dispatch } = usePlanner();
+  const blocks = getDayBlocks(state.blocks, day);
+  const done = blocks.filter((block) => block.status === "done" || block.status === "paused").length;
+  const progress = blocks.length ? done / blocks.length : 0;
 
   return (
-    <article className={`day-column ${mobile ? "mobile" : ""}`} data-drop-day={day} onClick={() => setSelectedDay(day)}>
-      <header>
-        <div className="day-orb" style={{ "--p": progress } as CSSProperties}>{shortDayLabel(day).slice(0, 1)}</div>
-        <div>
-          <strong>{mobile ? dayLabel(day) : shortDayLabel(day)}</strong>
-          <small>{dayBlocks.length ? `${dayBlocks.length} block${dayBlocks.length === 1 ? "" : "s"}` : "empty"}</small>
+    <section
+      className={`day-column ${state.selectedDay === day ? "selected" : ""}`}
+      data-drop-day={day}
+      onClick={() => dispatch({ type: "SET_DAY", day })}
+    >
+      <header className="day-head">
+        <div className="day-orb" style={{ "--progress": progress } as CSSProperties}>
+          <span>{shortDayLabel(day).slice(0, 1)}</span>
         </div>
+        <div>
+          <strong>{shortDayLabel(day)}</strong>
+          <small>{blocks.length ? `${blocks.length} blocks` : "drop actions"}</small>
+        </div>
+        <button className="day-sos" onClick={(event) => {
+          event.stopPropagation();
+          dispatch({ type: "DOWNSHIFT_DAY", day });
+        }}>
+          SOS
+        </button>
       </header>
+
       <div className="day-stack">
-        {dayBlocks.map((block) => {
-          const task = tasks[block.taskId];
-          return task ? <BlockCard key={block.id} task={task} block={block} compact={!mobile} /> : null;
+        {blocks.map((block) => {
+          const task = state.tasks[block.taskId];
+          return task ? <BlockCard key={block.id} block={block} task={task} /> : null;
         })}
-        {dayBlocks.length === 0 && (
-          <div className="empty-day">
-            <span aria-hidden="true" />
-            <strong>Drop actions here</strong>
-            <p>Build this day from the action bank.</p>
-            {mobile && <button onClick={(event) => { event.stopPropagation(); setInventoryOpen(true); }}>Open action bank</button>}
+
+        {blocks.length === 0 && (
+          <div className="drop-hint">
+            <span />
+            <small>Drop here</small>
           </div>
         )}
       </div>
-    </article>
+    </section>
   );
 }

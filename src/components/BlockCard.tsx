@@ -1,38 +1,78 @@
-import { getTier } from "../domain/rules";
+import { countdownText, getTier, isReviewReady } from "../domain/rules";
 import { HabitTask, ScheduledBlock } from "../domain/types";
-import { useDragRuntime } from "../state/DragContext";
-import { usePlanner } from "../state/PlannerContext";
+import { usePlanner } from "../state/plannerStore";
+import { useDragLayer } from "./DragLayer";
 
-export function BlockCard({ task, block, bank = false, compact = false, quiet = false }: { task: HabitTask; block?: ScheduledBlock; bank?: boolean; compact?: boolean; quiet?: boolean }) {
-  const drag = useDragRuntime();
-  const planner = usePlanner();
-  const tier = getTier(task, block?.tier ?? (task.kind === "reward" ? 2 : 3));
-  const dragKind = block ? "block" : "task";
-  const dragId = block?.id ?? task.id;
+interface Props {
+  block: ScheduledBlock;
+  task: HabitTask;
+}
+
+export function BlockCard({ block, task }: Props) {
+  const { dispatch, canEdit } = usePlanner();
+  const { beginDrag } = useDragLayer();
+  const tier = getTier(task, block.tier);
+  const ready = task.kind === "review" && isReviewReady(block);
+  const reviewCountdown = task.kind === "review" ? countdownText(block.reviewUnlockAt) : undefined;
+
+  const statusText =
+    block.status === "done"
+      ? "Done"
+      : block.status === "missed"
+        ? "Missed"
+        : block.status === "paused"
+          ? "Paused"
+          : block.status === "recoveryDue"
+            ? "Recovery"
+            : task.kind === "review"
+              ? reviewCountdown
+              : "Assumed OK";
 
   return (
-    <article
-      className={["block-card", task.kind, task.accent, compact ? "compact" : "", bank ? "bank" : "", block?.status ?? "", block?.injected ? "injected" : "", quiet ? "quiet" : ""].join(" ")}
-      data-drop-block={block?.id}
-      data-drop-day={block?.day}
-      onPointerDown={(event) => drag.beginDrag(dragKind, dragId, task.title, task.icon, event)}
-    >
-      <span className="grip" aria-hidden="true">⋮</span>
-      <span className="icon" aria-hidden="true">{task.icon}</span>
-      <span className="copy">
-        <strong>{task.title}</strong>
-        <small>{tier.label}{block?.at ? ` · ${block.at}` : ""}</small>
-      </span>
-      <span className="metric">{task.kind === "reward" ? `${task.tokenCost}T` : `+${task.tokenEarn}T`}</span>
+    <article className={`block-card ${task.kind} ${task.accent} ${block.status}`} data-drop-block={block.id}>
+      <button
+        className="drag-handle"
+        aria-label={`Move ${task.title}`}
+        onPointerDown={(event) => beginDrag({ type: "block", blockId: block.id }, event)}
+      >
+        ⋮⋮
+      </button>
 
-      {block && !quiet && (
-        <span className="controls" onPointerDown={(event) => event.stopPropagation()}>
-          <button className="tier-btn" onClick={() => planner.cycleTier(block.id)}>Tier {block.tier}</button>
-          <button className="done-btn" onClick={() => planner.completeBlock(block.id)}>Done</button>
-          <button className="skip-btn" onClick={() => planner.skipBlock(block.id)}>Skip</button>
-          <button className="remove-btn" onClick={() => planner.deleteBlock(block.id)}>Remove</button>
-        </span>
-      )}
+      <div className="block-main">
+        <div className="block-icon">{task.icon}</div>
+        <div className="block-copy">
+          <div className="block-title-row">
+            <strong>{task.title}</strong>
+            <span className={`status-pill ${block.status}`}>{statusText}</span>
+          </div>
+          <small>{tier.label} · {tier.minutes ? `${tier.minutes}m` : "no timer"}</small>
+        </div>
+      </div>
+
+      <div className="block-actions">
+        {task.kind === "review" ? (
+          <>
+            <button disabled={!ready} onClick={() => dispatch({ type: "OPEN_REVIEW", blockId: block.id })}>
+              Review
+            </button>
+            <button disabled={!canEdit} onClick={() => dispatch({ type: "DELETE_BLOCK", blockId: block.id })}>
+              Remove
+            </button>
+          </>
+        ) : task.kind === "pause" ? (
+          <>
+            <button onClick={() => dispatch({ type: "APPLY_PAUSE", blockId: block.id })}>Pause rest</button>
+            <button disabled={!canEdit} onClick={() => dispatch({ type: "DELETE_BLOCK", blockId: block.id })}>Remove</button>
+          </>
+        ) : (
+          <>
+            <button disabled={!canEdit} onClick={() => dispatch({ type: "CYCLE_TIER", blockId: block.id })}>Tier {block.tier}</button>
+            <button onClick={() => dispatch({ type: "MARK_DONE", blockId: block.id })}>Done</button>
+            <button onClick={() => dispatch({ type: "REPORT_MISSED", blockId: block.id })}>Missed</button>
+            <button disabled={!canEdit} onClick={() => dispatch({ type: "DELETE_BLOCK", blockId: block.id })}>Remove</button>
+          </>
+        )}
+      </div>
     </article>
   );
 }

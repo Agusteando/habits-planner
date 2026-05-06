@@ -1,33 +1,50 @@
 import { useMemo, useState } from "react";
-import { usePlanner } from "../state/PlannerContext";
-import { BlockCard } from "./BlockCard";
-const chips = ["All", "Body", "Food", "Focus", "Dopa", "Recovery"] as const;
+import { TaskCategory } from "../domain/types";
+import { useDragLayer } from "./DragLayer";
+import { usePlanner } from "../state/plannerStore";
 
-export function ActionBank({ rail = false }: { rail?: boolean }) {
-  const { tasks } = usePlanner();
-  const [chip, setChip] = useState<(typeof chips)[number]>("All");
-  const [query, setQuery] = useState("");
-  const visible = useMemo(() => Object.values(tasks).filter((task) => {
-    const q = query.trim().toLowerCase();
-    return (chip === "All" || task.category === chip) && (!q || task.title.toLowerCase().includes(q));
-  }), [tasks, chip, query]);
+const chips: Array<"All" | TaskCategory> = ["All", "Body", "Food", "Focus", "Dopa", "Recovery", "System"];
+
+export function ActionBank() {
+  const { state } = usePlanner();
+  const { beginDrag } = useDragLayer();
+  const [chip, setChip] = useState<"All" | TaskCategory>("All");
+
+  const visible = useMemo(
+    () => Object.values(state.tasks).filter((task) => chip === "All" || task.category === chip),
+    [state.tasks, chip]
+  );
 
   return (
-    <section className={`action-bank ${rail ? "rail" : ""}`}>
-      <div className="bank-title">
-        <strong>Action bank</strong>
-        <span>Drag one into a day</span>
+    <aside className="action-bank glass-panel">
+      <div className="bank-head">
+        <strong>Action Bank</strong>
+        <span>Drag into a day</span>
       </div>
-      <label className="search">
-        <span aria-hidden="true">⌕</span>
-        <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Find action" />
-      </label>
-      <div className="chips">
-        {chips.map((item) => <button key={item} className={chip === item ? "active" : ""} onClick={() => setChip(item)}>{item}</button>)}
+
+      <div className="chip-row">
+        {chips.map((item) => (
+          <button key={item} className={chip === item ? "active" : ""} onClick={() => setChip(item)}>
+            {item}
+          </button>
+        ))}
       </div>
-      <div className="bank-grid">
-        {visible.map((task) => <BlockCard key={task.id} task={task} bank compact={rail} />)}
+
+      <div className="bank-strip">
+        {visible.map((task) => (
+          <button
+            key={task.id}
+            className={`bank-card ${task.kind} ${task.accent}`}
+            onPointerDown={(event) => beginDrag({ type: "template", taskId: task.id }, event)}
+          >
+            <span className="bank-icon">{task.icon}</span>
+            <span className="bank-copy">
+              <strong>{task.title}</strong>
+              <small>{task.kind === "reward" ? `${task.tokenCost} tokens` : task.kind === "review" ? "planned edits" : task.kind === "pause" ? "stop point" : `+${task.tokenEarn} token`}</small>
+            </span>
+          </button>
+        ))}
       </div>
-    </section>
+    </aside>
   );
 }

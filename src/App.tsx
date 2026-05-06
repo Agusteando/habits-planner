@@ -1,9 +1,57 @@
-import { BottomNav } from "./components/BottomNav";
-import { MissionControl } from "./components/MissionControl";
-import { PlanMobile } from "./components/PlanMobile";
-import { Toast } from "./components/Toast";
+import { ActionBank } from "./components/ActionBank";
+import { DragProvider } from "./components/DragLayer";
 import { TodayView } from "./components/TodayView";
 import { TopBar } from "./components/TopBar";
 import { VaultView } from "./components/VaultView";
-import { usePlanner } from "./state/PlannerContext";
-export function App() { const { activeView } = usePlanner(); return <main className="app-shell"><TopBar /><div className="mobile-stage"><section className="mobile-view">{activeView === "today" && <TodayView />}{activeView === "plan" && <PlanMobile />}{activeView === "vault" && <VaultView />}</section><BottomNav /></div><div className="desktop-stage"><MissionControl /></div><Toast /></main>; }
+import { WeekBoard } from "./components/WeekBoard";
+import { usePlanner } from "./state/plannerStore";
+
+function BottomNav() {
+  const { state, dispatch } = usePlanner();
+  const items = [
+    ["plan", "Plan"],
+    ["today", "Today"],
+    ["vault", "Vault"]
+  ] as const;
+
+  return (
+    <nav className="bottom-nav">
+      {items.map(([view, label]) => (
+        <button key={view} className={state.activeView === view ? "active" : ""} onClick={() => dispatch({ type: "SET_VIEW", view })}>
+          {label}
+        </button>
+      ))}
+    </nav>
+  );
+}
+
+function Toast() {
+  const { state } = usePlanner();
+  return state.toast ? <div className="toast glass-panel">{state.toast}</div> : null;
+}
+
+export function App() {
+  const { state } = usePlanner();
+
+  return (
+    <DragProvider>
+      <main className="app-shell">
+        <TopBar />
+
+        <section className="workspace">
+          {state.activeView === "plan" && (
+            <>
+              <WeekBoard />
+              <ActionBank />
+            </>
+          )}
+          {state.activeView === "today" && <TodayView />}
+          {state.activeView === "vault" && <VaultView />}
+        </section>
+
+        <BottomNav />
+        <Toast />
+      </main>
+    </DragProvider>
+  );
+}

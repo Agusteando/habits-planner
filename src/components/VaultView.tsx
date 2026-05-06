@@ -1,4 +1,25 @@
-import { useRef } from "react";
-import { usePlanner } from "../state/PlannerContext";
-import { downloadJson } from "./downloadJson";
-export function VaultView() { const input = useRef<HTMLInputElement | null>(null); const { player, makeSnapshot, importSnapshot } = usePlanner(); async function onImport(file?: File) { if (!file) return; try { importSnapshot(JSON.parse(await file.text())); } catch { importSnapshot(null); } if (input.current) input.current.value = ""; } return <section className="vault-view"><div className="vault-card glass-panel"><span>◆</span><h1>Vault</h1><p>{player.tokens} tokens ready.</p></div><div className="vault-actions glass-panel"><button onClick={() => downloadJson(makeSnapshot())}>⇩ Export plan</button><button onClick={() => input.current?.click()}>⇧ Import plan</button></div><div className="vault-list"><div>💎 30 min videogames · 2T</div><div>🍕 Pizza Night · 3T</div><div>♨️ Hot Shower · 1T</div></div><input ref={input} className="hidden-file" type="file" accept=".json,application/json" onChange={(e) => onImport(e.target.files?.[0])} /></section>; }
+import { usePlanner } from "../state/plannerStore";
+
+export function VaultView() {
+  const { state, exportPlan } = usePlanner();
+
+  return (
+    <section className="vault-panel glass-panel">
+      <div className="vault-hero">
+        <span>✦</span>
+        <h1>Vault</h1>
+        <p>{state.player.tokens} tokens available for planned rewards.</p>
+      </div>
+      <div className="vault-actions">
+        <button onClick={exportPlan}>Export plan</button>
+        <button onClick={() => localStorage.removeItem("habit-planner-rpg-v6")}>Clear stored plan</button>
+      </div>
+      <div className="vault-list">
+        <div>✦ Videogames · 2T</div>
+        <div>✺ Pizza Night · 3T</div>
+        <div>◈ Review Window · unlocks edits</div>
+        <div>Ⅱ Pause Day · stops the remaining day</div>
+      </div>
+    </section>
+  );
+}

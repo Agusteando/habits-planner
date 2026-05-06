@@ -1,19 +1,18 @@
-# Habit Planner RPG v5
+# Habit Planner RPG v6
 
-This pass focuses on the core UX problem: the main planning surface now opens as an empty canvas and scales without squeezing the calendar blocks.
+A full React + TypeScript frontend focused on the corrected core UX:
 
-Key changes:
-
-- The app opens on Plan, not Today.
-- No scheduled blocks are seeded by default. The user starts from an empty week.
-- A visible `Use starter week` button exists for users who want a populated demo plan.
-- Desktop planning uses an adaptive wrapping calendar canvas instead of forcing seven narrow columns at standard resolutions.
-- Wide screens can still show seven days when there is enough width.
-- Block controls in the calendar use readable text buttons: `Tier`, `Done`, `Skip`, and `Remove`.
-- Action Bank is explicitly labeled and explains the first action: drag one block into a day.
-- Empty days explain where to drop actions.
-- The storage key is `habit-planner-rpg-v5`, so older seeded local state is not automatically loaded.
-- Import/export remains real JSON behavior.
+- Empty week by default when no stored plan exists.
+- Horizontal one-row week Kanban as the main planning surface.
+- No forced responsive wrapping of the week board.
+- Day columns preserve usable width and horizontally scroll when needed.
+- Blocks stack vertically inside each day and remain readable with multiple items.
+- Calendar block controls use text labels: Tier, Done, Missed, Remove, Review, Pause.
+- Completion is exception-based: the app assumes the plan went right unless the user reports otherwise.
+- Review blocks are first-class blocks with countdowns. When ready, they unlock a short edit window before resealing.
+- Pause blocks are first-class blocks that pause the rest of the day without treating it as failure.
+- Import/export are real JSON snapshots.
+- Local persistence is isolated under `habit-planner-rpg-v6`.
 
 Run:
 
@@ -22,7 +21,7 @@ npm install
 npm run dev
 ```
 
-Production build was verified with:
+Build:
 
 ```bash
 npm run build
