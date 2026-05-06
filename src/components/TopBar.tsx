@@ -1,10 +1,16 @@
-import { useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { countdownText } from "../domain/rules";
 import { usePlanner } from "../state/plannerStore";
 
 export function TopBar() {
   const { state, report, dispatch, exportPlan, importFile } = usePlanner();
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const [, setMinuteTick] = useState(0);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setMinuteTick((value) => value + 1), 30000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   const reviewText =
     state.week.mode === "reviewOpen"
@@ -14,6 +20,8 @@ export function TopBar() {
         : state.week.mode === "sealed"
           ? "Sealed"
           : "Draft";
+
+  const gateReady = state.week.mode === "reviewPending" && !!state.week.emergencyReviewUnlockAt && Date.now() >= new Date(state.week.emergencyReviewUnlockAt).getTime();
 
   return (
     <header className="topbar glass-panel">
@@ -36,6 +44,21 @@ export function TopBar() {
         )}
         <button className="soft-action" onClick={exportPlan}>Export</button>
         <button className="soft-action" onClick={() => inputRef.current?.click()}>Import</button>
+
+        {state.week.mode === "sealed" && (
+          <button className="soft-action" onClick={() => dispatch({ type: "REQUEST_EMERGENCY_REVIEW" })}>Review Gate</button>
+        )}
+
+        {state.week.mode === "reviewPending" && (
+          <button
+            className="soft-action"
+            disabled={!gateReady}
+            onClick={() => dispatch({ type: "OPEN_EMERGENCY_REVIEW" })}
+          >
+            {gateReady ? "Open Gate" : `Gate ${countdownText(state.week.emergencyReviewUnlockAt)}`}
+          </button>
+        )}
+
         <button className={`seal-action ${report.status}`} onClick={() => dispatch({ type: "SEAL" })}>
           {state.week.mode === "reviewOpen" ? "Reseal" : "Seal"}
         </button>

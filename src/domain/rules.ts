@@ -5,7 +5,6 @@ export const RED_ZONE_NET_TENSION = 80;
 export const THIN_ICE_NET_TENSION = 52;
 export const REVIEW_DELAY_MS = 24 * 60 * 60 * 1000;
 export const REVIEW_WINDOW_MS = 45 * 60 * 1000;
-export const SOS_LOCK_MS = 24 * 60 * 60 * 1000;
 
 export function id(prefix = "id") {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {

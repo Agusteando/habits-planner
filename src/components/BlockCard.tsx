@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { countdownText, getTier, isReviewReady } from "../domain/rules";
 import { HabitTask, ScheduledBlock } from "../domain/types";
 import { usePlanner } from "../state/plannerStore";
@@ -13,6 +13,14 @@ export function BlockCard({ block, task }: Props) {
   const { dispatch, canEdit } = usePlanner();
   const { beginDrag } = useDragLayer();
   const [expanded, setExpanded] = useState(false);
+  const [, setMinuteTick] = useState(0);
+
+  useEffect(() => {
+    if (task.kind !== "review") return;
+    const timer = window.setInterval(() => setMinuteTick((value) => value + 1), 30000);
+    return () => window.clearInterval(timer);
+  }, [task.kind]);
+
   const tier = getTier(task, block.tier);
   const ready = task.kind === "review" && isReviewReady(block);
   const reviewCountdown = task.kind === "review" ? countdownText(block.reviewUnlockAt) : undefined;

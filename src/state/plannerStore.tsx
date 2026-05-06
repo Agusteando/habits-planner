@@ -12,12 +12,13 @@ import {
   normalizeOrders,
   nowIso,
   REVIEW_DELAY_MS,
-  REVIEW_WINDOW_MS,
-  SOS_LOCK_MS
+  REVIEW_WINDOW_MS
 } from "../domain/rules";
 import { ActionBankSnapshot, DayKey, HabitTask, PlannerSnapshot, PlannerState, ScheduledBlock } from "../domain/types";
 
-const STORAGE_KEY = "habit-planner-rpg-v6";
+const STORAGE_KEY = "habit-planner-rpg-v10";
+const CURRENT_SCHEMA_VERSION = 10;
+const ACCEPTED_SCHEMA_VERSIONS = new Set([6, 10]);
 
 type DropTarget = { day: DayKey; beforeBlockId?: string };
 type Action =
@@ -30,52 +31,105 @@ type Action =
   | { type: "MARK_DONE"; blockId: string }
   | { type: "REPORT_MISSED"; blockId: string }
   | { type: "APPLY_PAUSE"; blockId: string }
-  | { type: "DOWNSHIFT_DAY"; day: DayKey }
   | { type: "SEAL" }
   | { type: "REQUEST_EMERGENCY_REVIEW" }
+  | { type: "OPEN_EMERGENCY_REVIEW" }
   | { type: "OPEN_REVIEW"; blockId: string }
   | { type: "STARTER_WEEK" }
+  | { type: "RESET_PLAN" }
   | { type: "IMPORT"; snapshot: PlannerSnapshot }
   | { type: "IMPORT_ACTION_BANK"; snapshot: ActionBankSnapshot }
   | { type: "TOAST"; toast?: string };
 
-function baseState(): PlannerState {
+function baseState(toast?: string): PlannerState {
   return {
-    schemaVersion: 6,
+    schemaVersion: CURRENT_SCHEMA_VERSION,
     activeView: "plan",
     tasks: taskTemplates,
     blocks: [],
     player: initialPlayer,
     week: initialWeek,
-    selectedDay: "mon"
+    selectedDay: "mon",
+    toast
   };
+}
+
+function isDayKey(value: unknown): value is DayKey {
+  return typeof value === "string" && DAYS.includes(value as DayKey);
+}
+
+function validateTier(value: unknown): asserts value is HabitTask["tiers"][number] {
+  const tier = value as HabitTask["tiers"][number];
+  if (!tier || typeof tier !== "object") throw new Error("Tier must be an object.");
+  if (![1, 2, 3].includes(tier.level)) throw new Error("Tier level must be 1, 2, or 3.");
+  if (typeof tier.label !== "string" || !tier.label.trim()) throw new Error("Tier label is required.");
+  for (const key of ["minutes", "xp", "tension", "relief"] as const) {
+    if (typeof tier[key] !== "number" || Number.isNaN(tier[key])) throw new Error(`Tier ${key} must be a number.`);
+  }
+}
+
+function validateTask(value: unknown): HabitTask {
+  const task = value as HabitTask;
+  if (!task || typeof task !== "object") throw new Error("Task must be an object.");
+  if (typeof task.id !== "string" || !task.id.trim()) throw new Error("Task id is required.");
+  if (typeof task.title !== "string" || !task.title.trim()) throw new Error(`Task ${task.id} needs a title.`);
+  if (typeof task.icon !== "string" || !task.icon.trim()) throw new Error(`Task ${task.id} needs an icon.`);
+  if (!["discipline", "reward", "recovery", "review", "pause"].includes(task.kind)) throw new Error(`Task ${task.id} has an invalid kind.`);
+  if (!["Body", "Food", "Focus", "Dopa", "Recovery", "System"].includes(task.category)) throw new Error(`Task ${task.id} has an invalid category.`);
+  if (!["cyan", "mint", "gold", "violet", "rose", "blue", "amber", "silver"].includes(task.accent)) throw new Error(`Task ${task.id} has an invalid accent.`);
+  if (typeof task.tokenCost !== "number" || typeof task.tokenEarn !== "number") throw new Error(`Task ${task.id} has invalid token values.`);
+  if (!Array.isArray(task.tiers) || task.tiers.length !== 3) throw new Error(`Task ${task.id} must include exactly three tiers.`);
+  task.tiers.forEach(validateTier);
+  return task;
 }
 
 function validateSnapshot(input: unknown): PlannerSnapshot {
   if (!input || typeof input !== "object") throw new Error("Invalid plan file.");
   const snapshot = input as Partial<PlannerSnapshot>;
-  if (snapshot.schemaVersion !== 6) throw new Error("Unsupported plan version.");
+  if (!ACCEPTED_SCHEMA_VERSIONS.has(Number(snapshot.schemaVersion))) throw new Error("Unsupported plan version.");
   if (!snapshot.tasks || typeof snapshot.tasks !== "object") throw new Error("Plan is missing actions.");
   if (!Array.isArray(snapshot.blocks)) throw new Error("Plan is missing blocks.");
   if (!snapshot.player || !snapshot.week) throw new Error("Plan is missing state.");
-  if (!snapshot.selectedDay || !DAYS.includes(snapshot.selectedDay)) throw new Error("Plan has an invalid day.");
-  return snapshot as PlannerSnapshot;
+  if (!isDayKey(snapshot.selectedDay)) throw new Error("Plan has an invalid selected day.");
+  Object.values(snapshot.tasks).forEach(validateTask);
+
+  for (const block of snapshot.blocks as ScheduledBlock[]) {
+    if (!block.id || !block.taskId || !isDayKey(block.day)) throw new Error("Plan contains an invalid block.");
+    if (!snapshot.tasks[block.taskId] && !taskTemplates[block.taskId]) throw new Error(`Block references missing action: ${block.taskId}`);
+  }
+
+  return {
+    ...(snapshot as PlannerSnapshot),
+    schemaVersion: CURRENT_SCHEMA_VERSION,
+    tasks: { ...taskTemplates, ...(snapshot.tasks as Record<string, HabitTask>) },
+    blocks: normalizeOrders(snapshot.blocks as ScheduledBlock[]),
+    week: {
+      mode: snapshot.week.mode ?? "draft",
+      sealedAt: snapshot.week.sealedAt,
+      reviewOpenUntil: snapshot.week.reviewOpenUntil,
+      emergencyReviewRequestedAt: snapshot.week.emergencyReviewRequestedAt,
+      emergencyReviewUnlockAt: snapshot.week.emergencyReviewUnlockAt
+    }
+  };
 }
 
 function validateActionBankSnapshot(input: unknown): ActionBankSnapshot {
   if (!input || typeof input !== "object") throw new Error("Invalid action bank file.");
   const snapshot = input as Partial<ActionBankSnapshot>;
-  if (snapshot.schemaVersion !== 6) throw new Error("Unsupported action bank version.");
+  if (!ACCEPTED_SCHEMA_VERSIONS.has(Number(snapshot.schemaVersion))) throw new Error("Unsupported action bank version.");
   if (snapshot.kind !== "habit-action-bank") throw new Error("This is not an action bank file.");
   if (!snapshot.tasks || typeof snapshot.tasks !== "object") throw new Error("Action bank is missing tasks.");
-
-  for (const task of Object.values(snapshot.tasks) as HabitTask[]) {
-    if (!task.id || !task.title || !task.kind || !Array.isArray(task.tiers) || task.tiers.length === 0) {
-      throw new Error("Action bank contains an invalid task.");
-    }
+  const tasks: Record<string, HabitTask> = {};
+  for (const task of Object.values(snapshot.tasks)) {
+    const validated = validateTask(task);
+    tasks[validated.id] = validated;
   }
-
-  return snapshot as ActionBankSnapshot;
+  return {
+    schemaVersion: CURRENT_SCHEMA_VERSION,
+    kind: "habit-action-bank",
+    exportedAt: new Date().toISOString(),
+    tasks
+  };
 }
 
 function loadState(): PlannerState {
@@ -83,15 +137,27 @@ function loadState(): PlannerState {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return baseState();
     const parsed = JSON.parse(raw) as PlannerState;
-    if (parsed.schemaVersion !== 6) return baseState();
+    if (!ACCEPTED_SCHEMA_VERSIONS.has(Number(parsed.schemaVersion))) return baseState();
+
+    const tasks = { ...taskTemplates, ...(parsed.tasks ?? {}) };
+    Object.values(tasks).forEach(validateTask);
+
     return {
       ...baseState(),
       ...parsed,
-      tasks: { ...taskTemplates, ...(parsed.tasks ?? {}) },
-      blocks: normalizeOrders(parsed.blocks ?? [])
+      schemaVersion: CURRENT_SCHEMA_VERSION,
+      tasks,
+      blocks: normalizeOrders(parsed.blocks ?? []),
+      week: {
+        mode: parsed.week?.mode ?? "draft",
+        sealedAt: parsed.week?.sealedAt,
+        reviewOpenUntil: parsed.week?.reviewOpenUntil,
+        emergencyReviewRequestedAt: parsed.week?.emergencyReviewRequestedAt,
+        emergencyReviewUnlockAt: parsed.week?.emergencyReviewUnlockAt
+      }
     };
   } catch {
-    return baseState();
+    return baseState("Stored plan was invalid and has been reset.");
   }
 }
 
@@ -138,8 +204,7 @@ function insertBlock(blocks: ScheduledBlock[], incoming: ScheduledBlock, target:
 }
 
 function editBlocked(state: PlannerState) {
-  if (canEditPlan(state.week)) return false;
-  return true;
+  return !canEditPlan(state.week);
 }
 
 function reducer(state: PlannerState, action: Action): PlannerState {
@@ -151,18 +216,18 @@ function reducer(state: PlannerState, action: Action): PlannerState {
       return { ...state, selectedDay: action.day };
 
     case "ADD_TEMPLATE": {
-      if (editBlocked(state)) return { ...state, toast: "Plan is sealed. Add a Review block first." };
+      if (editBlocked(state)) return { ...state, toast: "Plan is sealed. Open a Review window before editing." };
       const task = state.tasks[action.taskId];
-      if (!task) return state;
+      if (!task) return { ...state, toast: "Action not found." };
       const block = makeBlock(task, action.target.day, nextOrder(state.blocks, action.target.day), state.week.mode !== "draft");
       const blocks = insertBlock(state.blocks, block, action.target);
       return { ...state, blocks, selectedDay: action.target.day };
     }
 
     case "MOVE_BLOCK": {
-      if (editBlocked(state)) return { ...state, toast: "Plan is sealed." };
+      if (editBlocked(state)) return { ...state, toast: "Plan is sealed. Open a Review window before editing." };
       const moving = state.blocks.find((block) => block.id === action.blockId);
-      if (!moving) return state;
+      if (!moving) return { ...state, toast: "Block not found." };
       const rest = state.blocks.filter((block) => block.id !== action.blockId);
       const moved = { ...moving, day: action.target.day };
       const blocks = insertBlock(rest, moved, action.target);
@@ -176,11 +241,9 @@ function reducer(state: PlannerState, action: Action): PlannerState {
 
     case "CYCLE_TIER": {
       if (editBlocked(state)) return { ...state, toast: "Open a Review window before changing tiers." };
-      const sosLocked = state.week.sosUntil && Date.now() < new Date(state.week.sosUntil).getTime();
       const blocks = state.blocks.map((block) => {
         if (block.id !== action.blockId) return block;
-        if (sosLocked && block.tier === 1) return block;
-        const tier = block.tier === 1 ? 2 : block.tier === 2 ? 3 : 1;
+        const tier: 1 | 2 | 3 = block.tier === 1 ? 2 : block.tier === 2 ? 3 : 1;
         return { ...block, tier };
       });
       return { ...state, blocks };
@@ -188,28 +251,31 @@ function reducer(state: PlannerState, action: Action): PlannerState {
 
     case "MARK_DONE": {
       const block = state.blocks.find((candidate) => candidate.id === action.blockId);
-      if (!block) return state;
+      if (!block) return { ...state, toast: "Block not found." };
       const task = state.tasks[block.taskId];
-      if (!task) return state;
+      if (!task) return { ...state, toast: "Action not found." };
       const tier = getTier(task, block.tier);
+      const wasAlreadyDone = block.status === "done";
       const blocks = state.blocks.map((candidate) =>
         candidate.id === action.blockId ? { ...candidate, status: "done" as const } : candidate
       );
       return {
         ...state,
         blocks,
-        player: {
-          ...state.player,
-          xp: state.player.xp + tier.xp,
-          tokens: Math.max(0, state.player.tokens + task.tokenEarn - (task.kind === "reward" ? task.tokenCost : 0)),
-          streakState: task.kind === "recovery" ? "healthy" : state.player.streakState
-        }
+        player: wasAlreadyDone
+          ? state.player
+          : {
+              ...state.player,
+              xp: state.player.xp + tier.xp,
+              tokens: Math.max(0, state.player.tokens + task.tokenEarn - (task.kind === "reward" ? task.tokenCost : 0)),
+              streakState: task.kind === "recovery" ? "healthy" : state.player.streakState
+            }
       };
     }
 
     case "REPORT_MISSED": {
       const block = state.blocks.find((candidate) => candidate.id === action.blockId);
-      if (!block) return state;
+      if (!block) return { ...state, toast: "Block not found." };
 
       const existingRecovery = state.blocks.some(
         (candidate) => candidate.day === block.day && candidate.taskId === "recovery" && candidate.status === "recoveryDue"
@@ -233,7 +299,10 @@ function reducer(state: PlannerState, action: Action): PlannerState {
 
     case "APPLY_PAUSE": {
       const pause = state.blocks.find((candidate) => candidate.id === action.blockId);
-      if (!pause) return state;
+      if (!pause) return { ...state, toast: "Pause block not found." };
+      const task = state.tasks[pause.taskId];
+      if (task?.kind !== "pause") return { ...state, toast: "This block is not a Pause block." };
+
       const blocks = state.blocks.map((block) => {
         if (block.id === pause.id) return { ...block, status: "done" as const, pauseAppliedAt: nowIso() };
         if (block.day === pause.day && block.order > pause.order && block.status === "planned") {
@@ -244,20 +313,12 @@ function reducer(state: PlannerState, action: Action): PlannerState {
       return { ...state, blocks, toast: "Rest of day paused." };
     }
 
-    case "DOWNSHIFT_DAY": {
-      const until = new Date(Date.now() + SOS_LOCK_MS).toISOString();
-      const blocks = state.blocks.map((block) =>
-        block.day === action.day && block.status === "planned" ? { ...block, tier: 1 as const } : block
-      );
-      return { ...state, blocks, week: { ...state.week, sosUntil: until }, toast: "Day downshifted." };
-    }
-
     case "SEAL": {
       const report = calculateEquilibrium(state.blocks, state.tasks);
       if (!canSealWeek(report, state.week)) return { ...state, toast: report.sealDisabledReason ?? "Cannot seal yet." };
       return {
         ...state,
-        week: { ...state.week, mode: "sealed", sealedAt: nowIso(), reviewOpenUntil: undefined },
+        week: { mode: "sealed", sealedAt: nowIso() },
         blocks: state.blocks.map((block) => ({
           ...block,
           sealed: true,
@@ -271,30 +332,51 @@ function reducer(state: PlannerState, action: Action): PlannerState {
     }
 
     case "REQUEST_EMERGENCY_REVIEW": {
+      if (state.week.mode !== "sealed") return { ...state, toast: "Seal the week before requesting an emergency Review Gate." };
       const unlock = new Date(Date.now() + REVIEW_DELAY_MS).toISOString();
       return {
         ...state,
         week: {
-          ...state.week,
           mode: "reviewPending",
+          sealedAt: state.week.sealedAt,
           emergencyReviewRequestedAt: nowIso(),
           emergencyReviewUnlockAt: unlock
         },
-        toast: "Emergency review queued."
+        toast: "Review Gate requested."
+      };
+    }
+
+    case "OPEN_EMERGENCY_REVIEW": {
+      if (state.week.mode !== "reviewPending" || !state.week.emergencyReviewUnlockAt) {
+        return { ...state, toast: "No Review Gate is pending." };
+      }
+      if (Date.now() < new Date(state.week.emergencyReviewUnlockAt).getTime()) {
+        return { ...state, toast: `Review Gate opens in ${countdownText(state.week.emergencyReviewUnlockAt)}.` };
+      }
+      return {
+        ...state,
+        week: {
+          mode: "reviewOpen",
+          sealedAt: state.week.sealedAt,
+          reviewOpenUntil: new Date(Date.now() + REVIEW_WINDOW_MS).toISOString()
+        },
+        toast: "Review window open. Edit, then reseal."
       };
     }
 
     case "OPEN_REVIEW": {
       const block = state.blocks.find((candidate) => candidate.id === action.blockId);
-      if (!block) return state;
+      if (!block) return { ...state, toast: "Review block not found." };
+      const task = state.tasks[block.taskId];
+      if (task?.kind !== "review") return { ...state, toast: "This block is not a Review block." };
       if (!block.reviewUnlockAt || Date.now() < new Date(block.reviewUnlockAt).getTime()) {
         return { ...state, toast: `Review opens in ${countdownText(block.reviewUnlockAt)}.` };
       }
       return {
         ...state,
         week: {
-          ...state.week,
           mode: "reviewOpen",
+          sealedAt: state.week.sealedAt,
           reviewOpenUntil: new Date(Date.now() + REVIEW_WINDOW_MS).toISOString()
         },
         blocks: state.blocks.map((candidate) =>
@@ -318,15 +400,19 @@ function reducer(state: PlannerState, action: Action): PlannerState {
       let blocks: ScheduledBlock[] = [];
       for (const [day, taskId] of starter) {
         const task = state.tasks[taskId];
-        blocks.push(makeBlock(task, day, nextOrder(blocks, day), false));
+        if (task) blocks.push(makeBlock(task, day, nextOrder(blocks, day), false));
       }
       return { ...state, blocks: normalizeOrders(blocks), selectedDay: "mon", toast: "Starter week added." };
     }
 
+    case "RESET_PLAN":
+      return baseState("Plan reset.");
+
     case "IMPORT":
       return {
         ...action.snapshot,
-        schemaVersion: 6,
+        schemaVersion: CURRENT_SCHEMA_VERSION,
+        activeView: "plan",
         tasks: { ...taskTemplates, ...action.snapshot.tasks },
         blocks: normalizeOrders(action.snapshot.blocks),
         toast: "Plan imported."
@@ -336,7 +422,7 @@ function reducer(state: PlannerState, action: Action): PlannerState {
       return {
         ...state,
         tasks: { ...state.tasks, ...action.snapshot.tasks },
-        toast: "Action bank imported."
+        toast: `Action bank imported (${Object.keys(action.snapshot.tasks).length}).`
       };
 
     case "TOAST":
@@ -363,6 +449,18 @@ interface PlannerContextValue {
 
 const PlannerContext = createContext<PlannerContextValue | null>(null);
 
+function downloadJson(filename: string, value: unknown) {
+  const blob = new Blob([JSON.stringify(value, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = filename;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  URL.revokeObjectURL(url);
+}
+
 export function PlannerProvider({ children }: { children: React.ReactNode }) {
   const [state, dispatch] = useReducer(reducer, undefined, loadState);
 
@@ -373,7 +471,7 @@ export function PlannerProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!state.toast) return;
-    const timer = window.setTimeout(() => dispatch({ type: "TOAST", toast: undefined }), 2400);
+    const timer = window.setTimeout(() => dispatch({ type: "TOAST", toast: undefined }), 2600);
     return () => window.clearTimeout(timer);
   }, [state.toast]);
 
@@ -382,71 +480,62 @@ export function PlannerProvider({ children }: { children: React.ReactNode }) {
 
   const makeSnapshot = useCallback((): PlannerSnapshot => ({
     ...state,
+    schemaVersion: CURRENT_SCHEMA_VERSION,
     exportedAt: new Date().toISOString(),
     toast: undefined
   }), [state]);
 
   const makeActionBankSnapshot = useCallback((): ActionBankSnapshot => ({
-    schemaVersion: 6,
+    schemaVersion: CURRENT_SCHEMA_VERSION,
     kind: "habit-action-bank",
     exportedAt: new Date().toISOString(),
     tasks: state.tasks
   }), [state.tasks]);
 
   const importFile = useCallback(async (file: File) => {
-    const text = await file.text();
-    const parsed = JSON.parse(text);
-    dispatch({ type: "IMPORT", snapshot: validateSnapshot(parsed) });
+    try {
+      const text = await file.text();
+      const parsed = JSON.parse(text);
+      dispatch({ type: "IMPORT", snapshot: validateSnapshot(parsed) });
+    } catch (error) {
+      dispatch({ type: "TOAST", toast: error instanceof Error ? error.message : "Plan import failed." });
+    }
   }, []);
 
   const importActionBankFile = useCallback(async (file: File) => {
-    const text = await file.text();
-    const parsed = JSON.parse(text);
-    dispatch({ type: "IMPORT_ACTION_BANK", snapshot: validateActionBankSnapshot(parsed) });
+    try {
+      const text = await file.text();
+      const parsed = JSON.parse(text);
+      dispatch({ type: "IMPORT_ACTION_BANK", snapshot: validateActionBankSnapshot(parsed) });
+    } catch (error) {
+      dispatch({ type: "TOAST", toast: error instanceof Error ? error.message : "Action bank import failed." });
+    }
   }, []);
 
   const exportPlan = useCallback(() => {
-    const snapshot = makeSnapshot();
-    const blob = new Blob([JSON.stringify(snapshot, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
     const stamp = new Date().toISOString().slice(0, 10);
-    const anchor = document.createElement("a");
-    anchor.href = url;
-    anchor.download = `habit-plan-${stamp}.json`;
-    document.body.appendChild(anchor);
-    anchor.click();
-    anchor.remove();
-    URL.revokeObjectURL(url);
+    downloadJson(`habit-plan-${stamp}.json`, makeSnapshot());
+    dispatch({ type: "TOAST", toast: "Plan exported." });
   }, [makeSnapshot]);
 
   const exportActionBank = useCallback(() => {
-    const snapshot = makeActionBankSnapshot();
-    const blob = new Blob([JSON.stringify(snapshot, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
     const stamp = new Date().toISOString().slice(0, 10);
-    const anchor = document.createElement("a");
-    anchor.href = url;
-    anchor.download = `habit-action-bank-${stamp}.json`;
-    document.body.appendChild(anchor);
-    anchor.click();
-    anchor.remove();
-    URL.revokeObjectURL(url);
+    downloadJson(`habit-action-bank-${stamp}.json`, makeActionBankSnapshot());
+    dispatch({ type: "TOAST", toast: "Action bank exported." });
   }, [makeActionBankSnapshot]);
 
   const exportActionBankTemplate = useCallback(() => {
-    const firstTask = Object.values(taskTemplates)[0];
     const template: ActionBankSnapshot = {
-      schemaVersion: 6,
+      schemaVersion: CURRENT_SCHEMA_VERSION,
       kind: "habit-action-bank",
       exportedAt: new Date().toISOString(),
       tasks: {
         example_custom_action: {
-          ...firstTask,
           id: "example_custom_action",
           title: "Example Custom Action",
           icon: "✧",
-          category: "Focus",
           kind: "discipline",
+          category: "Focus",
           tokenCost: 0,
           tokenEarn: 1,
           accent: "cyan",
@@ -458,15 +547,8 @@ export function PlannerProvider({ children }: { children: React.ReactNode }) {
         }
       }
     };
-    const blob = new Blob([JSON.stringify(template, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement("a");
-    anchor.href = url;
-    anchor.download = "habit-action-bank-template.json";
-    document.body.appendChild(anchor);
-    anchor.click();
-    anchor.remove();
-    URL.revokeObjectURL(url);
+    downloadJson("habit-action-bank-template.json", template);
+    dispatch({ type: "TOAST", toast: "Template downloaded." });
   }, []);
 
   const value = useMemo(

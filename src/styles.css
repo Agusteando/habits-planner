@@ -112,10 +112,17 @@ button:disabled { opacity: .42; cursor: not-allowed; }
 .mode.reviewPending { color: var(--amber); }
 
 .top-actions {
+  min-width: 0;
   display: flex;
   align-items: center;
   justify-content: flex-end;
   gap: 7px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.top-actions::-webkit-scrollbar {
+  display: none;
 }
 .soft-action, .seal-action {
   height: 36px;
@@ -829,9 +836,6 @@ button:disabled { opacity: .42; cursor: not-allowed; }
     scrollbar-width: none;
   }
   .top-status::-webkit-scrollbar { display: none; }
-  .top-actions .soft-action:not(:first-child) {
-    display: none;
-  }
   .week-head {
     grid-template-columns: 1fr;
   }

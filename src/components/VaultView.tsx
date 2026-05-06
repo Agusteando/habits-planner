@@ -1,7 +1,7 @@
 import { usePlanner } from "../state/plannerStore";
 
 export function VaultView() {
-  const { state, exportPlan } = usePlanner();
+  const { state, exportPlan, dispatch } = usePlanner();
 
   return (
     <section className="vault-panel glass-panel">
@@ -12,7 +12,7 @@ export function VaultView() {
       </div>
       <div className="vault-actions">
         <button onClick={exportPlan}>Export plan</button>
-        <button onClick={() => localStorage.removeItem("habit-planner-rpg-v6")}>Clear stored plan</button>
+        <button onClick={() => dispatch({ type: "RESET_PLAN" })}>Reset plan</button>
       </div>
       <div className="vault-list">
         <div>✦ Videogames · 2T</div>

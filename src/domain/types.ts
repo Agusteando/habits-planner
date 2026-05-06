@@ -55,7 +55,6 @@ export interface WeekState {
   reviewOpenUntil?: string;
   emergencyReviewRequestedAt?: string;
   emergencyReviewUnlockAt?: string;
-  sosUntil?: string;
 }
 
 export interface EquilibriumReport {
@@ -68,7 +67,7 @@ export interface EquilibriumReport {
 }
 
 export interface PlannerState {
-  schemaVersion: 6;
+  schemaVersion: number;
   activeView: "plan" | "today" | "vault";
   tasks: Record<string, HabitTask>;
   blocks: ScheduledBlock[];
@@ -83,7 +82,7 @@ export interface PlannerSnapshot extends PlannerState {
 }
 
 export interface ActionBankSnapshot {
-  schemaVersion: 6;
+  schemaVersion: number;
   kind: "habit-action-bank";
   exportedAt: string;
   tasks: Record<string, HabitTask>;
