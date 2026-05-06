@@ -2137,3 +2137,175 @@
   .top-status .top-chip{padding:0 10px}
   .soft-action,.seal-action{height:36px;padding:0 11px}
 }
+
+/* v35 responsive Kanban toolbar refinement */
+.week-head{
+  position:relative;
+}
+.week-controls{
+  min-width:0;
+}
+.week-nav-cluster,.week-action-cluster,.view-cluster,.time-filter-cluster{
+  min-width:0;
+}
+.week-nav-cluster strong{
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+@media (min-width:1180px) and (max-width:1680px){
+  .week-panel{
+    gap:10px;
+  }
+  .week-head{
+    grid-template-columns:minmax(0,1fr) minmax(240px,300px);
+    grid-template-areas:
+      "intro equilibrium"
+      "controls controls";
+    align-items:start;
+    gap:10px 12px;
+    padding-bottom:2px;
+  }
+  .week-head > div:first-child{
+    grid-area:intro;
+    min-width:0;
+  }
+  .week-head > .week-controls{
+    grid-area:controls;
+  }
+  .week-head > .equilibrium{
+    grid-area:equilibrium;
+    align-self:stretch;
+  }
+  .week-head h1{
+    font-size:clamp(30px,2.4vw,42px);
+  }
+  .week-head p{
+    max-width:680px;
+    margin-top:5px;
+  }
+  .week-controls{
+    width:100%;
+    display:grid;
+    grid-template-columns:minmax(230px,1.1fr) auto auto minmax(0,auto);
+    justify-content:stretch;
+    align-items:center;
+    gap:8px;
+    padding:7px;
+    border-radius:20px;
+    background:linear-gradient(180deg,rgba(255,255,255,.048),rgba(255,255,255,.018));
+    border:1px solid rgba(255,255,255,.072);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.045);
+    overflow:hidden;
+  }
+  .week-nav-cluster,.week-action-cluster,.view-cluster,.time-filter-cluster{
+    min-height:38px;
+    border-radius:15px;
+    padding:4px;
+    background:rgba(255,255,255,.04);
+  }
+  .week-nav-cluster{
+    justify-content:space-between;
+  }
+  .week-nav-cluster strong{
+    min-width:0;
+    flex:1 1 auto;
+    font-size:12px;
+  }
+  .week-action-cluster,.view-cluster,.time-filter-cluster{
+    justify-content:center;
+  }
+  .week-controls button{
+    height:30px;
+    padding:0 9px;
+    font-size:12px;
+  }
+  .time-filter-cluster{
+    grid-column:auto;
+    justify-self:stretch;
+  }
+  .time-filter-cluster button{
+    min-width:0;
+    flex:1 1 0;
+  }
+}
+@media (min-width:1180px) and (max-width:1360px){
+  .week-head{
+    grid-template-columns:1fr;
+    grid-template-areas:
+      "intro"
+      "equilibrium"
+      "controls";
+  }
+  .week-head > .equilibrium{
+    width:100%;
+    max-width:none;
+  }
+  .week-controls{
+    grid-template-columns:minmax(220px,1fr) repeat(2,auto);
+  }
+  .time-filter-cluster{
+    grid-column:1 / -1;
+    justify-self:stretch;
+  }
+  .week-nav-cluster,.week-action-cluster,.view-cluster{
+    width:100%;
+  }
+  .week-action-cluster,.view-cluster{
+    justify-content:center;
+  }
+}
+@media (max-width:1179px){
+  .week-head{
+    gap:10px;
+  }
+  .week-controls{
+    display:grid;
+    grid-template-columns:minmax(0,1fr) auto auto;
+    width:100%;
+    padding:7px;
+    border-radius:20px;
+    background:linear-gradient(180deg,rgba(255,255,255,.048),rgba(255,255,255,.018));
+    border:1px solid rgba(255,255,255,.072);
+    overflow:hidden;
+  }
+  .week-nav-cluster,.week-action-cluster,.view-cluster,.time-filter-cluster{
+    min-height:38px;
+  }
+  .time-filter-cluster{
+    grid-column:1 / -1;
+    justify-self:stretch;
+  }
+}
+@media (max-width:760px){
+  .week-controls{
+    grid-template-columns:1fr 1fr;
+  }
+  .week-nav-cluster{
+    grid-column:1 / -1;
+  }
+  .time-filter-cluster{
+    grid-column:1 / -1;
+  }
+  .week-nav-cluster,.week-action-cluster,.view-cluster,.time-filter-cluster{
+    width:100%;
+    justify-content:center;
+  }
+  .week-controls button{
+    height:32px;
+    padding:0 9px;
+    font-size:12px;
+  }
+}
+@media (max-width:520px){
+  .week-controls{
+    grid-template-columns:1fr;
+  }
+  .week-action-cluster,.view-cluster,.time-filter-cluster{
+    grid-column:1 / -1;
+  }
+}
+:root[data-theme="light"] .week-controls{
+  background:linear-gradient(180deg,rgba(255,255,255,.82),rgba(255,255,255,.54));
+  border-color:rgba(15,23,42,.09);
+}
