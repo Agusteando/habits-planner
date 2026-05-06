@@ -891,3 +891,33 @@
 .calendar-event-shell.beam-hit-shell .time-card::before{content:"";position:absolute;left:0;right:0;top:50%;height:2px;background:linear-gradient(90deg,rgba(103,232,249,.16),rgba(103,232,249,.98),rgba(255,255,255,.85));box-shadow:0 0 18px rgba(103,232,249,.5);z-index:4}.calendar-event-shell.beam-hit-shell .time-card::after{content:"";position:absolute;left:-9px;top:50%;width:20px;height:20px;border-radius:999px;transform:translateY(-50%);background:radial-gradient(circle,rgba(255,255,255,.95),rgba(103,232,249,.70) 35%,transparent 72%);box-shadow:0 0 26px rgba(103,232,249,.6);z-index:5}
 @media (max-width:1180px){.calendar-grid-shell{width:max(100%,1320px);grid-template-columns:66px repeat(7,minmax(175px,1fr))}}@media (max-width:680px){.calendar-grid-shell{width:max(100%,1180px);grid-template-columns:58px repeat(7,minmax(160px,1fr));grid-template-rows:48px 900px;min-height:948px}.calendar-event-shell{left:6px;right:6px}.calendar-day-head{padding:8px}.calendar-axis{font-size:9px}}
 :root[data-theme="light"] .calendar-head-spacer,:root[data-theme="light"] .calendar-day-head,:root[data-theme="light"] .calendar-axis,:root[data-theme="light"] .calendar-day-lane{background:rgba(255,255,255,.74);border-color:rgba(15,23,42,.1)}:root[data-theme="light"] .calendar-hour-line{background:rgba(15,23,42,.08)}:root[data-theme="light"] .calendar-hour-line::after{background:rgba(15,23,42,.045)}:root[data-theme="light"] .calendar-now-line span{background:rgba(255,255,255,.95)}
+
+/* v28 time-view beam + particles + cleaner category visibility */
+.kind-pill{opacity:0;max-width:0;padding-inline:0;border-width:0;overflow:hidden;transform:translateY(2px);transition:opacity .18s ease,max-width .18s ease,padding .18s ease,border-width .18s ease,transform .18s ease}
+.block-card:hover .kind-pill,.block-card.expanded .kind-pill,.block-card:focus-within .kind-pill{opacity:1;max-width:110px;padding:2px 7px;border-width:1px;transform:none}
+.calendar-grid-shell{--axis-width:76px;grid-template-columns:var(--axis-width) repeat(7,minmax(190px,1fr))}
+.calendar-axis,.calendar-day-lane{grid-row:2}
+.calendar-axis{z-index:4;overflow:visible}
+.calendar-day-lane{z-index:2}
+.calendar-beam{position:absolute;z-index:5;height:0;pointer-events:none;transform:translateY(-1px)}
+.calendar-beam .beam-core{position:absolute;left:0;right:0;top:0;height:2px;border-radius:999px;background:linear-gradient(90deg,rgba(103,232,249,.24),rgba(103,232,249,.98) 55%,rgba(255,255,255,.98));box-shadow:0 0 18px rgba(103,232,249,.45),0 0 32px rgba(103,232,249,.18)}
+.calendar-beam .beam-aura{position:absolute;left:-4px;right:-4px;top:-5px;height:12px;border-radius:999px;background:linear-gradient(90deg,rgba(103,232,249,.03),rgba(103,232,249,.28),rgba(103,232,249,.06));filter:blur(4px)}
+.calendar-beam .beam-sparks{position:absolute;right:-3px;top:-13px;width:30px;height:28px;background:radial-gradient(circle at 14% 62%,rgba(255,255,255,.95) 0 1.1px,transparent 2px),radial-gradient(circle at 28% 24%,rgba(103,232,249,.95) 0 1.2px,transparent 2px),radial-gradient(circle at 48% 68%,rgba(255,255,255,.95) 0 1.2px,transparent 2px),radial-gradient(circle at 66% 34%,rgba(255,209,102,.95) 0 1.2px,transparent 2px),radial-gradient(circle at 80% 58%,rgba(103,232,249,.95) 0 1.2px,transparent 2px);filter:drop-shadow(0 0 8px rgba(255,255,255,.38));animation:cuttingSparks .95s linear infinite}
+.calendar-beam span{position:absolute;left:-4px;top:-22px;padding:3px 7px;border-radius:999px;background:rgba(6,11,20,.88);border:1px solid rgba(103,232,249,.26);color:var(--cyan);font-size:10px;font-weight:900;letter-spacing:.05em}
+.calendar-beam.no-target .beam-core{background:linear-gradient(90deg,rgba(103,232,249,.22),rgba(103,232,249,.92) 70%,rgba(255,255,255,.84))}
+.calendar-beam.no-target .beam-aura{background:linear-gradient(90deg,rgba(103,232,249,.02),rgba(103,232,249,.22),rgba(103,232,249,.03))}
+.calendar-event-shell{overflow:visible}
+.calendar-event-shell .block-card{padding-bottom:22px}
+.calendar-event-shell.beam-hit-shell .time-card{border-color:rgba(103,232,249,.48);box-shadow:0 14px 36px rgba(0,0,0,.34),0 0 28px rgba(103,232,249,.24),inset 0 1px 0 rgba(255,255,255,.08),inset 12px 0 20px rgba(103,232,249,.14)}
+.calendar-event-shell.beam-hit-shell .time-card::before{content:"";position:absolute;left:0;right:0;top:50%;height:2px;background:linear-gradient(90deg,rgba(103,232,249,.1),rgba(103,232,249,.98),rgba(255,255,255,.9));box-shadow:0 0 20px rgba(103,232,249,.55);z-index:4}
+.calendar-event-shell.beam-hit-shell .time-card::after{content:"";position:absolute;left:-10px;top:50%;width:24px;height:24px;border-radius:999px;transform:translateY(-50%);background:radial-gradient(circle,rgba(255,255,255,.95),rgba(103,232,249,.76) 36%,transparent 72%);box-shadow:0 0 30px rgba(103,232,249,.62);z-index:5}
+.calendar-resize{z-index:6}
+.completion-burst{position:fixed;z-index:1500;width:0;height:0;pointer-events:none}
+.completion-burst span{position:absolute;left:0;top:0;width:8px;height:8px;border-radius:999px;background:radial-gradient(circle,var(--success),rgba(84,255,169,0));box-shadow:0 0 12px rgba(84,255,169,.65);transform:rotate(calc(var(--i) * 25deg)) translateX(calc(16px + (var(--i) % 3) * 7px));animation:burstOut .9s cubic-bezier(.16,.84,.19,1) forwards;animation-delay:calc(var(--i) * 10ms)}
+.completion-burst.done span:nth-child(odd){background:radial-gradient(circle,var(--cyan),rgba(103,232,249,0));box-shadow:0 0 12px rgba(103,232,249,.62)}
+.completion-burst.done span:nth-child(3n){background:radial-gradient(circle,var(--gold),rgba(255,209,102,0));box-shadow:0 0 12px rgba(255,209,102,.5)}
+.completion-burst.auto span{width:6px;height:6px;opacity:.75}
+@keyframes burstOut{0%{opacity:0;transform:translate(-50%,-50%) rotate(calc(var(--i) * 25deg)) translateX(0) scale(.2)}15%{opacity:1}100%{opacity:0;transform:translate(-50%,-50%) rotate(calc(var(--i) * 25deg)) translateX(calc(26px + (var(--i) % 4) * 10px)) scale(1)}}
+@media (max-width:1180px){.calendar-grid-shell{--axis-width:66px;grid-template-columns:var(--axis-width) repeat(7,minmax(175px,1fr))}}
+@media (max-width:680px){.calendar-grid-shell{--axis-width:58px;grid-template-columns:var(--axis-width) repeat(7,minmax(160px,1fr))}.calendar-beam span{left:4px}}
+:root[data-theme="light"] .calendar-beam span{background:rgba(255,255,255,.96)}

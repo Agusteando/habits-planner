@@ -20,11 +20,12 @@ type DaySeal = { sealedAt: string };
 type Player = { level: number; xp: number; tokens: number; streakDays: number; streakState: "healthy" | "fractured"; resetCount: number };
 type Week = { mode: Mode; sealedAt?: string; reviewOpenUntil?: string; emergencyReviewRequestedAt?: string; emergencyReviewUnlockAt?: string; daySeals: Partial<Record<DayKey, DaySeal>> };
 type Theme = "dark" | "light";
-type State = { schemaVersion: 27; activeView: "plan" | "today" | "vault"; tasks: Record<string, Task>; blocks: Block[]; player: Player; week: Week; selectedDay: DayKey; weekStartIso: string; hidePastDays: boolean; planningView: PlanningView; timeFilter: TimeFilter; theme: Theme; toast?: string };
+type State = { schemaVersion: 28; activeView: "plan" | "today" | "vault"; tasks: Record<string, Task>; blocks: Block[]; player: Player; week: Week; selectedDay: DayKey; weekStartIso: string; hidePastDays: boolean; planningView: PlanningView; timeFilter: TimeFilter; theme: Theme; toast?: string };
 type BankFile = { schemaVersion: number; kind: "habit-action-bank"; exportedAt: string; tasks: Record<string, Task> };
 type PlanFile = State & { exportedAt: string };
+type ParticleBurst = { id: string; x: number; y: number; mode: "done" | "auto" };
 
-const STORAGE_KEY = "habit-planner-rpg-v27";
+const STORAGE_KEY = "habit-planner-rpg-v28";
 const LEGACY_STORAGE_KEYS = ["habit-planner-rpg-v26","habit-planner-rpg-v25","habit-planner-rpg-v24","habit-planner-rpg-v23","habit-planner-rpg-v22","habit-planner-rpg-v21","habit-planner-rpg-v20","habit-planner-rpg-v19","habit-planner-rpg-v18","habit-planner-rpg-v17","habit-planner-rpg-v16","habit-planner-rpg-v15","habit-planner-rpg-v14","habit-planner-rpg-v13","habit-planner-rpg-v12","habit-planner-rpg-v11"];
 const DAYS: DayKey[] = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
 const REVIEW_DELAY = 24 * 60 * 60 * 1000;
@@ -68,8 +69,8 @@ function dayBlocks(blocks:Block[],day:DayKey){return blocks.filter(b=>b.day===da
 function normalize(blocks:Block[]){return DAYS.flatMap(day=>dayBlocks(blocks,day).map((b,i)=>({...b,order:i+1})));}
 function nextOrder(blocks:Block[],day:DayKey){const xs=blocks.filter(b=>b.day===day); return xs.length?Math.max(...xs.map(b=>b.order))+1:1;}
 function countdown(target?:string){if(!target)return""; const ms=new Date(target).getTime()-Date.now(); if(ms<=0)return"Ready"; const m=Math.ceil(ms/60000), h=Math.floor(m/60), min=m%60; if(h>=24)return`${Math.floor(h/24)}d ${h%24}h`; return h?`${h}h ${min}m`:`${min}m`;}
-function baseState(toast?:string, resetCount=0):State{return{schemaVersion:27,activeView:"plan",tasks:tasksSeed,blocks:[],player:{level:5,xp:1400,tokens:4,streakDays:12,streakState:"healthy",resetCount},week:{mode:"draft",daySeals:{}},selectedDay:"mon",weekStartIso:startOfWeekIso(),hidePastDays:false,planningView:"blocks",timeFilter:"both",theme:"dark",toast};}
-function loadState():State{try{let raw=localStorage.getItem(STORAGE_KEY); if(!raw){for(const key of LEGACY_STORAGE_KEYS){raw=localStorage.getItem(key); if(raw)break;}} if(!raw)return baseState(); const p=JSON.parse(raw); if(!p||typeof p!=="object")return baseState(); return {...baseState(),...p,schemaVersion:27,tasks:{...tasksSeed,...(p.tasks||{})},blocks:normalize(p.blocks||[]),player:{...baseState().player,...(p.player||{}),resetCount:p.player?.resetCount||0},week:{mode:p.week?.mode||"draft",sealedAt:p.week?.sealedAt,reviewOpenUntil:p.week?.reviewOpenUntil,emergencyReviewRequestedAt:p.week?.emergencyReviewRequestedAt,emergencyReviewUnlockAt:p.week?.emergencyReviewUnlockAt,daySeals:p.week?.daySeals||{}},weekStartIso:p.weekStartIso||startOfWeekIso(),hidePastDays:!!p.hidePastDays,planningView:p.planningView==="time"?"time":"blocks",timeFilter:p.timeFilter==="morning"||p.timeFilter==="afternoon"?p.timeFilter:"both",theme:p.theme==="light"?"light":"dark"};}catch{return baseState("Stored plan reset.");}}
+function baseState(toast?:string, resetCount=0):State{return{schemaVersion:28,activeView:"plan",tasks:tasksSeed,blocks:[],player:{level:5,xp:1400,tokens:4,streakDays:12,streakState:"healthy",resetCount},week:{mode:"draft",daySeals:{}},selectedDay:"mon",weekStartIso:startOfWeekIso(),hidePastDays:false,planningView:"blocks",timeFilter:"both",theme:"dark",toast};}
+function loadState():State{try{let raw=localStorage.getItem(STORAGE_KEY); if(!raw){for(const key of LEGACY_STORAGE_KEYS){raw=localStorage.getItem(key); if(raw)break;}} if(!raw)return baseState(); const p=JSON.parse(raw); if(!p||typeof p!=="object")return baseState(); return {...baseState(),...p,schemaVersion:28,tasks:{...tasksSeed,...(p.tasks||{})},blocks:normalize(p.blocks||[]),player:{...baseState().player,...(p.player||{}),resetCount:p.player?.resetCount||0},week:{mode:p.week?.mode||"draft",sealedAt:p.week?.sealedAt,reviewOpenUntil:p.week?.reviewOpenUntil,emergencyReviewRequestedAt:p.week?.emergencyReviewRequestedAt,emergencyReviewUnlockAt:p.week?.emergencyReviewUnlockAt,daySeals:p.week?.daySeals||{}},weekStartIso:p.weekStartIso||startOfWeekIso(),hidePastDays:!!p.hidePastDays,planningView:p.planningView==="time"?"time":"blocks",timeFilter:p.timeFilter==="morning"||p.timeFilter==="afternoon"?p.timeFilter:"both",theme:p.theme==="light"?"light":"dark"};}catch{return baseState("Stored plan reset.");}}
 function report(blocks:Block[],tasks:Record<string,Task>){let tension=0,relief=0,tokenDelta=0; for(const b of blocks){if(b.status==="missed"||b.status==="paused")continue; const t=tasks[b.taskId]; if(!t)continue; const tier=getTier(t,b.tier); tension+=tier.tension; relief+=tier.relief; tokenDelta+=t.tokenEarn-t.tokenCost;} const netTension=tension-relief; const status=netTension>=RED_ZONE?"redZone":netTension>=THIN_ICE?"thinIce":"balanced"; return{tension,relief,tokenDelta,netTension,status,sealDisabledReason: status==="redZone"?"Add relief before sealing.":tokenDelta<0?"Rewards exceed earned tokens.":undefined};}
 function canSeal(r:ReturnType<typeof report>, week:Week){return (week.mode==="draft"||week.mode==="reviewOpen")&&r.status!=="redZone"&&r.tokenDelta>=0;}
 function canEditGlobal(week:Week){return week.mode==="draft"|| (week.mode==="reviewOpen" && !!week.reviewOpenUntil && Date.now()<new Date(week.reviewOpenUntil).getTime());}
@@ -84,6 +85,8 @@ function currentLineInfo(weekStartIso:string,day:DayKey,filter:TimeFilter){if(!i
 function clamp(n:number,min:number,max:number){return Math.max(min,Math.min(max,n));}
 function snap(n:number,step=15){return Math.round(n/step)*step;}
 function formatMinutes(mins:number){const h=Math.floor(mins/60), m=mins%60; const d=new Date(); d.setHours(h,m,0,0); return d.toLocaleTimeString([], {hour:"numeric", minute:"2-digit"});}
+function eventTimeMeta(b:Block,index:number,tier:Tier){const start=calendarStart(b,index); const duration=calendarDuration(b,tier); const end=clamp(start+duration,CAL_START,CAL_END); return {start,duration,end};}
+function shouldAutoCompleteBlock(weekStartIso:string,b:Block,index:number,t:Task){ if(b.status!=="planned") return false; if(!isToday(weekStartIso,b.day)) return false; const {end}=eventTimeMeta(b,index,getTier(t,b.tier)); const now=new Date(); const mins=now.getHours()*60+now.getMinutes(); return mins>=end; }
 function calendarStart(b:Block,index:number){if(typeof b.timeStart==="number")return clamp(b.timeStart,CAL_START,CAL_END-MIN_EVENT_MINUTES); if(b.timeBand)return bandRange(b.timeBand).start+Math.min(45,index*12); return clamp(CAL_START+index*45,CAL_START,CAL_END-MIN_EVENT_MINUTES);}
 function calendarDuration(b:Block,tier:Tier){return clamp(b.timeMinutes??Math.max(MIN_EVENT_MINUTES,tier.minutes||30),MIN_EVENT_MINUTES,240);}
 function ensureReviewBlock(s:State, day:DayKey, unlockAt?:string){const exists=s.blocks.some(b=>b.day===day&&s.tasks[b.taskId]?.kind==="review"&&b.status==="planned"); if(exists)return s.blocks; const review=s.tasks.review; if(!review)return s.blocks; return normalize([...s.blocks,{...makeBlock(review,day,nextOrder(s.blocks,day),unlockAt||new Date(Date.now()+REVIEW_DELAY).toISOString(),"19-21")}]);}
@@ -93,15 +96,15 @@ function insertBlock(blocks:Block[],incoming:Block,target:{day:DayKey;beforeBloc
 function makeCustom(title:string,kind:Kind):Task{const clean=title.trim(); const idText=clean.toLowerCase().replace(/[^a-z0-9]+/g,"_").replace(/^_|_$/g,"").slice(0,38)||"custom"; const c={discipline:["Focus","cyan","✧",0,1,[4,16,34],[10,30,60],["Minimum version","Standard version","Deep version"]],reward:["Dopa","violet","✦",1,0,[0,0,0],[0,0,0],["Small reward","Standard reward","Long reward"]],recovery:["Recovery","amber","⬖",0,0,[0,2,4],[8,16,24],["Tiny reset","Reset","Full reset"]],review:["System","silver","◈",0,0,[0,0,0],[0,0,0],["15 min edit window","30 min review","45 min reset"]],pause:["System","silver","Ⅱ",0,0,[0,0,0],[0,0,0],["Pause remaining day","Protect evening","Full stop"]]}[kind] as [Category,Accent,string,number,number,number[],number[],string[]]; const relief=kind==="reward"?[14,28,44]:kind==="recovery"?[12,20,30]:kind==="review"?[8,10,12]:kind==="pause"?[20,30,40]:[0,0,0]; return{id:`custom_${idText}_${Date.now().toString(36)}`,title:clean,icon:c[2],kind,category:c[0],accent:c[1],tokenCost:c[3],tokenEarn:c[4],tiers:[1,2,3].map((l,i)=>({level:l as 1|2|3,label:c[7][i],minutes:kind==="pause"?0:[5,20,45][i],xp:c[6][i],tension:c[5][i],relief:relief[i]}))};}
 function downloadJson(name:string,data:unknown){const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"}); const url=URL.createObjectURL(blob); const a=document.createElement("a"); a.href=url; a.download=name; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);}
 function validateTask(x:any):Task{if(!x||typeof x!=="object")throw new Error("Invalid action."); if(!x.id||!x.title||!x.icon)throw new Error("Action needs id, title, and icon."); if(!["discipline","reward","recovery","review","pause"].includes(x.kind))throw new Error(`Invalid action kind: ${x.kind}`); if(!["Body","Food","Focus","Dopa","Recovery","System"].includes(x.category))throw new Error(`Invalid category: ${x.category}`); if(!Array.isArray(x.tiers)||x.tiers.length!==3)throw new Error(`${x.title} must have exactly 3 tiers.`); return x as Task;}
-function validateBank(x:any):BankFile{if(!x||x.kind!=="habit-action-bank"||!x.tasks)throw new Error("Not an action bank file."); const tasks:Record<string,Task>={}; Object.values(x.tasks).forEach((v:any)=>{const t=validateTask(v); tasks[t.id]=t;}); return{schemaVersion:27,kind:"habit-action-bank",exportedAt:new Date().toISOString(),tasks};}
-function validatePlan(x:any):PlanFile{if(!x||!x.tasks||!Array.isArray(x.blocks))throw new Error("Invalid plan file."); const tasks={...tasksSeed,...x.tasks}; Object.values(tasks).forEach((v:any)=>validateTask(v)); return{...baseState(),...x,schemaVersion:27,tasks,blocks:normalize(x.blocks),player:{...baseState().player,...x.player,resetCount:x.player?.resetCount||0},week:{mode:x.week?.mode||"draft",sealedAt:x.week?.sealedAt,reviewOpenUntil:x.week?.reviewOpenUntil,emergencyReviewRequestedAt:x.week?.emergencyReviewRequestedAt,emergencyReviewUnlockAt:x.week?.emergencyReviewUnlockAt,daySeals:x.week?.daySeals||{}},weekStartIso:x.weekStartIso||startOfWeekIso(),hidePastDays:!!x.hidePastDays,planningView:x.planningView==="time"?"time":"blocks",timeFilter:x.timeFilter==="morning"||x.timeFilter==="afternoon"?x.timeFilter:"both",theme:x.theme==="light"?"light":"dark",exportedAt:new Date().toISOString()};}
+function validateBank(x:any):BankFile{if(!x||x.kind!=="habit-action-bank"||!x.tasks)throw new Error("Not an action bank file."); const tasks:Record<string,Task>={}; Object.values(x.tasks).forEach((v:any)=>{const t=validateTask(v); tasks[t.id]=t;}); return{schemaVersion:28,kind:"habit-action-bank",exportedAt:new Date().toISOString(),tasks};}
+function validatePlan(x:any):PlanFile{if(!x||!x.tasks||!Array.isArray(x.blocks))throw new Error("Invalid plan file."); const tasks={...tasksSeed,...x.tasks}; Object.values(tasks).forEach((v:any)=>validateTask(v)); return{...baseState(),...x,schemaVersion:28,tasks,blocks:normalize(x.blocks),player:{...baseState().player,...x.player,resetCount:x.player?.resetCount||0},week:{mode:x.week?.mode||"draft",sealedAt:x.week?.sealedAt,reviewOpenUntil:x.week?.reviewOpenUntil,emergencyReviewRequestedAt:x.week?.emergencyReviewRequestedAt,emergencyReviewUnlockAt:x.week?.emergencyReviewUnlockAt,daySeals:x.week?.daySeals||{}},weekStartIso:x.weekStartIso||startOfWeekIso(),hidePastDays:!!x.hidePastDays,planningView:x.planningView==="time"?"time":"blocks",timeFilter:x.timeFilter==="morning"||x.timeFilter==="afternoon"?x.timeFilter:"both",theme:x.theme==="light"?"light":"dark",exportedAt:new Date().toISOString()};}
 
 type DropTarget = {day:DayKey;beforeBlockId?:string;timeBand?:TimeBand;timeStart?:number};
 type Drag = {type:"task";taskId:string;x:number;y:number}|{type:"block";blockId:string;x:number;y:number};
 function dropTarget(x:number,y:number):DropTarget|null{const el=document.elementFromPoint(x,y) as HTMLElement|null; if(!el)return null; const cal=el.closest<HTMLElement>("[data-calendar-day]"); if(cal?.dataset.calendarDay){const rect=cal.getBoundingClientRect(); const day=cal.dataset.calendarDay as DayKey; const timeStart=clamp(snap(CAL_START+(y-rect.top)/CAL_PX_PER_MIN),CAL_START,CAL_END-MIN_EVENT_MINUTES); return{day,timeStart};} const time=el.closest<HTMLElement>("[data-time-band]"); if(time?.dataset.timeBand){const day=time.closest<HTMLElement>("[data-drop-day]")?.dataset.dropDay as DayKey|undefined; if(day)return{day,timeBand:time.dataset.timeBand as TimeBand};} const block=el.closest<HTMLElement>("[data-drop-block]"); if(block?.dataset.dropBlock){const day=block.closest<HTMLElement>("[data-drop-day]")?.dataset.dropDay as DayKey|undefined; if(day)return{day,beforeBlockId:block.dataset.dropBlock};} const day=el.closest<HTMLElement>("[data-drop-day]")?.dataset.dropDay as DayKey|undefined; return day?{day}:null;}
 
 function App(){
-  const [state,setState]=useState<State>(loadState); const [drag,setDrag]=useState<Drag|null>(null); const [expanded,setExpanded]=useState<string|null>(null); const [popover,setPopover]=useState<{blockId:string;top:number;left:number;width:number}|null>(null); const [menu,setMenu]=useState(false); const [bankMenu,setBankMenu]=useState(false); const [manageBank,setManageBank]=useState(false); const [showAdd,setShowAdd]=useState(false); const [query,setQuery]=useState(""); const [chip,setChip]=useState<"All"|Category>("All"); const [newTitle,setNewTitle]=useState(""); const [newKind,setNewKind]=useState<Kind>("discipline"); const [tick,setTick]=useState(0); const planImport=useRef<HTMLInputElement|null>(null); const bankImport=useRef<HTMLInputElement|null>(null);
+  const [state,setState]=useState<State>(loadState); const [drag,setDrag]=useState<Drag|null>(null); const [expanded,setExpanded]=useState<string|null>(null); const [popover,setPopover]=useState<{blockId:string;top:number;left:number;width:number}|null>(null); const [menu,setMenu]=useState(false); const [bankMenu,setBankMenu]=useState(false); const [manageBank,setManageBank]=useState(false); const [showAdd,setShowAdd]=useState(false); const [query,setQuery]=useState(""); const [chip,setChip]=useState<"All"|Category>("All"); const [newTitle,setNewTitle]=useState(""); const [newKind,setNewKind]=useState<Kind>("discipline"); const [tick,setTick]=useState(0); const [bursts,setBursts]=useState<ParticleBurst[]>([]); const [beamGeom,setBeamGeom]=useState<{top:number;left:number;width:number;hasTarget:boolean}|null>(null); const planImport=useRef<HTMLInputElement|null>(null); const bankImport=useRef<HTMLInputElement|null>(null); const calendarShellRef=useRef<HTMLDivElement|null>(null);
   useEffect(()=>{localStorage.setItem(STORAGE_KEY,JSON.stringify({...state,toast:undefined}));},[state]);
   useEffect(()=>{document.documentElement.dataset.theme=state.theme;},[state.theme]);
   useEffect(()=>{if(!state.toast)return; const t=window.setTimeout(()=>setState(s=>({...s,toast:undefined})),2600); return()=>clearTimeout(t);},[state.toast]);
@@ -114,7 +117,71 @@ function App(){
   const all=dayBlocks(state.blocks,focusDay);
   const bands=visibleBands(state.timeFilter);
   const nowLine=currentLineInfo(state.weekStartIso,focusDay,state.timeFilter);
-  const filteredTasks=Object.values(state.tasks).filter(t=>{const q=query.trim().toLowerCase(); return (chip==="All"||t.category===chip)&&(!q||[t.title,t.kind,t.category,...t.tiers.map(x=>x.label)].join(" ").toLowerCase().includes(q));});
+  const filteredTasks=Object.values(state.tasks).filter(t=>{const q=query.trim().toLowerCase(); return (chip==="All"||t.category===chip)&&(!q||[t.title,t.kind,t.category,...t.tiers.map(x=>x.label)].join(" " ).toLowerCase().includes(q));});
+  function emitBurstNearBlock(blockId:string, mode:"done"|"auto"="done"){ 
+    requestAnimationFrame(()=>{ 
+      const el=document.querySelector(`[data-block-id="${blockId}"]`) as HTMLElement|null; 
+      if(!el)return; 
+      const rect=el.getBoundingClientRect(); 
+      const burst={id:uid("burst"),x:rect.left+Math.min(46,Math.max(24,rect.width*.22)),y:rect.top+rect.height*.5,mode}; 
+      setBursts(xs=>[...xs,burst]); 
+      window.setTimeout(()=>setBursts(xs=>xs.filter(x=>x.id!==burst.id)),900); 
+    }); 
+  }
+  useEffect(()=>{
+    const pending:{id:string;xp:number;tokens:number;recovery:boolean}[]=[];
+    for(const day of DAYS){
+      const blocks=dayBlocks(state.blocks,day);
+      blocks.forEach((b,index)=>{
+        const t=state.tasks[b.taskId];
+        if(!t) return;
+        if(shouldAutoCompleteBlock(state.weekStartIso,b,index,t)){
+          const tier=getTier(t,b.tier);
+          pending.push({id:b.id,xp:tier.xp,tokens:t.tokenEarn-(t.kind==="reward"?t.tokenCost:0),recovery:t.kind==="recovery"});
+        }
+      });
+    }
+    if(!pending.length) return;
+    setState(s=>({
+      ...s,
+      blocks:s.blocks.map(b=>pending.some(p=>p.id===b.id)?{...b,status:"done" as Status}:b),
+      player:{...s.player,xp:s.player.xp+pending.reduce((a,p)=>a+p.xp,0),tokens:Math.max(0,s.player.tokens+pending.reduce((a,p)=>a+p.tokens,0)),streakState:pending.some(p=>p.recovery)?"healthy":s.player.streakState}
+    }));
+    pending.forEach(p=>emitBurstNearBlock(p.id,"auto"));
+  },[tick,state.weekStartIso,state.blocks,state.tasks]);
+
+  useEffect(()=>{
+    if(state.planningView!=="time"){ setBeamGeom(null); return; }
+    const todayDay=visibleDays.find(day=>isToday(state.weekStartIso,day));
+    if(!todayDay){ setBeamGeom(null); return; }
+    const line=currentLineInfo(state.weekStartIso,todayDay,state.timeFilter);
+    const shell=calendarShellRef.current;
+    if(!shell||!line){ setBeamGeom(null); return; }
+    const shellRect=shell.getBoundingClientRect();
+    const axis=shell.querySelector(".calendar-axis") as HTMLElement|null;
+    const lane=shell.querySelector(`[data-calendar-day="${todayDay}"]`) as HTMLElement|null;
+    if(!axis||!lane){ setBeamGeom(null); return; }
+    const axisRect=axis.getBoundingClientRect();
+    const blocks=dayBlocks(state.blocks,todayDay);
+    let hitId:string|undefined;
+    blocks.forEach((b,index)=>{
+      const t=state.tasks[b.taskId];
+      if(!t||hitId) return;
+      const meta=eventTimeMeta(b,index,getTier(t,b.tier));
+      if(line.minutes>=meta.start&&line.minutes<=meta.end) hitId=b.id;
+    });
+    const origin=(axisRect.left-shellRect.left)+axisRect.width-8;
+    let width:number;
+    if(hitId){
+      const hitEl=shell.querySelector(`[data-event-id="${hitId}"]`) as HTMLElement|null;
+      const hitRect=hitEl?.getBoundingClientRect();
+      width=hitRect?Math.max(24,(hitRect.left-shellRect.left+20)-origin):Math.max(24,(lane.getBoundingClientRect().right-shellRect.left)-origin);
+    }else{
+      width=Math.max(24,(shellRect.width-16)-origin);
+    }
+    setBeamGeom({top:(line.minutes-CAL_START)*CAL_PX_PER_MIN,left:origin,width,hasTarget:!!hitId});
+  },[state.planningView,state.weekStartIso,state.timeFilter,state.blocks,state.tasks,tick,visibleDays.join("|")]);
+
   function patch(fn:(s:State)=>State){setState(s=>fn(s));}
   function addTemplate(taskId:string,target:DropTarget){patch(s=>{if(!canEditDay(s,target.day))return{...s,toast:"That day is sealed."}; const t=s.tasks[taskId]; if(!t)return{...s,toast:"Action not found."}; return{...s,selectedDay:target.day,blocks:insertBlock(s.blocks,makeBlock(t,target.day,nextOrder(s.blocks,target.day),undefined,target.timeBand,target.timeStart),target)};});}
   function moveBlock(blockId:string,target:DropTarget){patch(s=>{const b=s.blocks.find(x=>x.id===blockId); if(!b)return{...s,toast:"Block not found."}; if(!canEditDay(s,b.day)||!canEditDay(s,target.day))return{...s,toast:"That day is sealed."}; return{...s,selectedDay:target.day,blocks:insertBlock(s.blocks.filter(x=>x.id!==blockId),{...b,day:target.day,timeBand:target.timeBand??b.timeBand,timeStart:target.timeStart??b.timeStart},target)};});}
@@ -127,7 +194,7 @@ function App(){
   function blockAction(id:string,action:"tier"|"done"|"missed"|"remove"|"pause"|"review"){patch(s=>{const b=s.blocks.find(x=>x.id===id); if(!b)return{...s,toast:"Block not found."}; const t=s.tasks[b.taskId]; if(!t)return{...s,toast:"Action not found."}; if(action==="remove"||action==="tier"){if(!canEditDay(s,b.day))return{...s,toast:"Open Review before editing a sealed day."};}
     if(action==="remove"){if(isSystemTask(t))return{...s,toast:"System blocks cannot be deleted."}; return{...s,blocks:normalize(s.blocks.filter(x=>x.id!==id))};}
     if(action==="tier")return{...s,blocks:s.blocks.map(x=>x.id===id?{...x,tier:x.tier===1?2:x.tier===2?3:1}:x)};
-    if(action==="done"){const tier=getTier(t,b.tier), already=b.status==="done"; return{...s,blocks:s.blocks.map(x=>x.id===id?{...x,status:"done"}:x),player:already?s.player:{...s.player,xp:s.player.xp+tier.xp,tokens:Math.max(0,s.player.tokens+t.tokenEarn-(t.kind==="reward"?t.tokenCost:0)),streakState:t.kind==="recovery"?"healthy":s.player.streakState}};}
+    if(action==="done"){const tier=getTier(t,b.tier), already=b.status==="done"; if(!already) emitBurstNearBlock(id,"done"); return{...s,blocks:s.blocks.map(x=>x.id===id?{...x,status:"done"}:x),player:already?s.player:{...s.player,xp:s.player.xp+tier.xp,tokens:Math.max(0,s.player.tokens+t.tokenEarn-(t.kind==="reward"?t.tokenCost:0)),streakState:t.kind==="recovery"?"healthy":s.player.streakState}};}
     if(action==="missed"){const has=s.blocks.some(x=>x.day===b.day&&x.taskId==="recovery"&&x.status==="recoveryDue"); const recovery=makeBlock(s.tasks.recovery,b.day,nextOrder(s.blocks,b.day)); return{...s,blocks:normalize([...s.blocks.map(x=>x.id===id?{...x,status:"missed" as Status}:x),...(has?[]:[{...recovery,tier:1 as const,status:"recoveryDue" as Status,injected:true}])]),player:{...s.player,streakState:"fractured"},toast:has?"Miss noted.":"Recovery added."};}
     if(action==="pause"){if(t.kind!=="pause")return{...s,toast:"Not a Pause block."}; return{...s,blocks:s.blocks.map(x=>x.id===id?{...x,status:"done",pauseAppliedAt:new Date().toISOString()}:x.day===b.day&&x.order>b.order&&x.status==="planned"?{...x,status:"paused"}:x),toast:"Rest of day paused."};}
     if(action==="review"){if(t.kind!=="review")return{...s,toast:"Not a Review block."}; if(!hasAnySealed(s))return{...s,toast:"Seal a day or week before using Review."}; if(!b.reviewUnlockAt||new Date(b.reviewUnlockAt).getTime()>Date.now())return{...s,toast:`Review opens in ${countdown(b.reviewUnlockAt)}.`}; return{...s,week:{...s.week,mode:"reviewOpen",reviewOpenUntil:new Date(Date.now()+REVIEW_WINDOW).toISOString()},blocks:s.blocks.map(x=>x.id===id?{...x,status:"done",reviewOpenedAt:new Date().toISOString()}:x),toast:"Review active. Sealed days can now be unsealed."};}
@@ -138,14 +205,14 @@ function App(){
   async function importPlan(file?:File){if(!file)return; try{const parsed=validatePlan(JSON.parse(await file.text())); setState({...parsed,toast:"Plan imported."});}catch(e){setState(s=>({...s,toast:e instanceof Error?e.message:"Plan import failed."}));}}
   async function importBank(file?:File){if(!file)return; try{const bank=validateBank(JSON.parse(await file.text())); setState(s=>({...s,tasks:{...s.tasks,...bank.tasks},toast:`Action bank imported (${Object.keys(bank.tasks).length}).`}));}catch(e){setState(s=>({...s,toast:e instanceof Error?e.message:"Action bank import failed."}));}}
   function exportPlan(){downloadJson(`habit-plan-${new Date().toISOString().slice(0,10)}.json`,{...state,exportedAt:new Date().toISOString(),toast:undefined}); setState(s=>({...s,toast:"Plan exported."}));}
-  function exportBank(){downloadJson(`habit-action-bank-${new Date().toISOString().slice(0,10)}.json`,{schemaVersion:27,kind:"habit-action-bank",exportedAt:new Date().toISOString(),tasks:state.tasks}); setState(s=>({...s,toast:"Action bank exported."}));}
-  function exportTemplate(){downloadJson("habit-action-bank-template.json",{schemaVersion:27,kind:"habit-action-bank",exportedAt:new Date().toISOString(),tasks:{example_custom_action:makeCustom("Example Custom Action","discipline")}}); setState(s=>({...s,toast:"Template downloaded."}));}
+  function exportBank(){downloadJson(`habit-action-bank-${new Date().toISOString().slice(0,10)}.json`,{schemaVersion:28,kind:"habit-action-bank",exportedAt:new Date().toISOString(),tasks:state.tasks}); setState(s=>({...s,toast:"Action bank exported."}));}
+  function exportTemplate(){downloadJson("habit-action-bank-template.json",{schemaVersion:28,kind:"habit-action-bank",exportedAt:new Date().toISOString(),tasks:{example_custom_action:makeCustom("Example Custom Action","discipline")}}); setState(s=>({...s,toast:"Template downloaded."}));}
   function starter(){if(state.blocks.length){setState(s=>({...s,toast:"Starter only works on a blank week."})); return;} const starter:[DayKey,string][]=[["mon","pushups"],["mon","tuna"],["mon","walk"],["tue","focus"],["tue","game"],["wed","pushups"],["wed","tuna"],["thu","focus"],["thu","pause"],["fri","walk"],["fri","pizza"],["sun","review"]]; let blocks:Block[]=[]; for(const [d,id] of starter){blocks.push(makeBlock(state.tasks[id],d,nextOrder(blocks,d)));} setState(s=>({...s,blocks:normalize(blocks),toast:"Starter week added."}));}
   function fullWipe(){setState(s=>({...s,blocks:s.blocks.map(b=>({...b,status:"planned",sealed:false,reviewOpenedAt:undefined,pauseAppliedAt:undefined})),player:{level:1,xp:0,tokens:0,streakDays:0,streakState:"healthy",resetCount:s.player.resetCount+1},week:{mode:"draft",daySeals:{}},theme:s.theme,toast:"Full reset complete. Progress lost; plan unsealed."}));}
   function removeBankAction(taskId:string){setState(s=>{const task=s.tasks[taskId]; if(!task)return s; if(isSystemTask(task))return{...s,toast:"System actions cannot be deleted."}; const nextTasks={...s.tasks}; delete nextTasks[taskId]; const removedBlocks=s.blocks.filter(b=>b.taskId===taskId).length; const nextBlocks=s.blocks.filter(b=>b.taskId!==taskId); return {...s,tasks:nextTasks,blocks:nextBlocks,toast:removedBlocks?`Deleted ${task.title} and ${removedBlocks} planned block${removedBlocks===1?"":"s"}.`:`Deleted ${task.title}.`};});}
   function toggleTheme(){setState(s=>({...s,theme:s.theme==="dark"?"light":"dark",toast:s.theme==="dark"?"Light theme":"Dark theme"}));}
 
-  function renderBlock(b:Block, beamHit=false, timeMode=false){
+  function renderBlock(b:Block, beamHit=false, timeMode=false, timeMeta?:{start:number;duration:number;end:number}){
     const t=state.tasks[b.taskId];
     if(!t)return null;
     const tier=getTier(t,b.tier);
@@ -157,7 +224,7 @@ function App(){
     const close=()=>{setExpanded(null); setPopover(null);};
     const openPopover=(el:HTMLElement)=>{const rect=el.getBoundingClientRect(); const width=Math.min(380, Math.max(320, window.innerWidth*0.26)); const gap=14; const preferredLeft=rect.right+gap; const left=Math.min(preferredLeft, window.innerWidth-width-16); const top=Math.max(16, Math.min(rect.top-8, window.innerHeight-220)); setPopover({blockId:b.id, top, left, width}); setExpanded(b.id);};
     const action=(name:"tier"|"done"|"missed"|"remove"|"pause"|"review")=>{blockAction(b.id,name); close();};
-    return <article key={b.id} data-block-root data-drop-block={b.id} className={`block-card ${timeMode?"time-card":""} ${t.kind} ${t.accent} ${b.status} ${open?"expanded":""} ${reviewLive?"review-live":""} ${beamHit?"beam-hit":""}`} onClick={e=>{e.stopPropagation(); const el=e.currentTarget as HTMLElement; if(open) close(); else openPopover(el);}}>
+    return <article key={b.id} data-block-id={b.id} data-block-root data-drop-block={b.id} className={`block-card ${timeMode?"time-card":""} ${t.kind} ${t.accent} ${b.status} ${open?"expanded":""} ${reviewLive?"review-live":""} ${beamHit?"beam-hit":""}`} onClick={e=>{e.stopPropagation(); const el=e.currentTarget as HTMLElement; if(open) close(); else openPopover(el);}}>
       <button className="drag-handle" onPointerDown={e=>startDrag(e,{type:"block",blockId:b.id,x:e.clientX,y:e.clientY})}>⋮⋮</button>
       <i className={`block-accent ${t.kind}`}/>
       <div className="block-main">
@@ -165,11 +232,11 @@ function App(){
         <div className="block-copy">
           <div className="block-meta-row"><span className={`kind-pill ${t.kind}`}>{kindLabel}</span>{isSystemTask(t)&&<span className="system-badge">System</span>}<span className={`status-pill ${b.status}`}>{reviewLive?"Review active":status}</span></div>
           <div className="block-title-row"><strong>{t.title}</strong></div>
-          <small>{tier.label} · {tier.minutes?`${tier.minutes}m`:"No timer"}</small>
+          <small>{timeMode && timeMeta ? `${formatMinutes(timeMeta.start)}–${formatMinutes(timeMeta.end)} · ${timeMeta.duration}m` : `${tier.label} · ${tier.minutes?`${tier.minutes}m`:"No timer"}`}</small>
         </div>
       </div>
       {open&&popover?.blockId===b.id&&createPortal(<div data-block-popover className={`block-popover block-popover-overlay ${timeMode?"time-mode":""}`} style={{top:popover.top,left:popover.left,width:popover.width}} onClick={e=>e.stopPropagation()}>
-        <div className="block-popover-head"><div><strong>{t.title}</strong><small>{kindLabel} · {tier.label}{tier.minutes?` · ${tier.minutes} min`:""}</small></div><button className="popover-close" onClick={close}>✕</button></div>
+        <div className="block-popover-head"><div><strong>{t.title}</strong><small>{timeMode && timeMeta ? `${formatMinutes(timeMeta.start)}–${formatMinutes(timeMeta.end)} · ${timeMeta.duration} min` : `${kindLabel} · ${tier.label}${tier.minutes?` · ${tier.minutes} min`:""}`}</small></div><button className="popover-close" onClick={close}>✕</button></div>
         <div className="popover-actions">{t.kind==="review"?<><button className="primary" onClick={()=>action("review")}>Open Review</button><button className="ghost" disabled>System block</button></>:t.kind==="pause"?<><button className="primary" onClick={()=>action("pause")}>Pause rest of day</button><button className="ghost" disabled>System block</button></>:t.kind==="recovery"?<><button className="soft" disabled={!canEdit} onClick={()=>action("tier")}>Tier {b.tier}</button><button className="success" onClick={()=>action("done")}>Done</button><button className="danger" onClick={()=>action("missed")}>Report missed</button><button className="ghost" disabled>System block</button></>:<><button className="soft" disabled={!canEdit} onClick={()=>action("tier")}>Tier {b.tier}</button><button className="success" onClick={()=>action("done")}>Done</button><button className="danger" onClick={()=>action("missed")}>Report missed</button><button className="ghost" disabled={!canEdit} onClick={()=>action("remove")}>Delete block</button></>}</div>
       </div>, document.body)}
     </article>;
@@ -189,11 +256,11 @@ function App(){
     const nowLine=todayDay?currentLineInfo(state.weekStartIso,todayDay,state.timeFilter):null;
     const hours=Array.from({length:(CAL_END-CAL_START)/60+1},(_,i)=>CAL_START+i*60);
     return <div className="calendar-week">
-      <div className="calendar-grid-shell">
+      <div ref={calendarShellRef} className="calendar-grid-shell">
         <div className="calendar-head-spacer" />
         {visibleDays.map(day=>{const sealed=!!state.week.daySeals[day]; const past=isPast(state.weekStartIso,day); const today=isToday(state.weekStartIso,day); return <div key={day} className={`calendar-day-head ${today?"today":""} ${past?"past":""} ${sealed?"sealed":""}`} onClick={()=>setState(s=>({...s,selectedDay:day}))} title={dateTitle(state.weekStartIso,day)}><strong>{day.toUpperCase()}</strong><small>{dateShort(state.weekStartIso,day)}</small>{sealed&&<span>Locked</span>}</div>})}
-        <div className="calendar-axis">{hours.map(h=><div key={h} className="calendar-hour-label" style={{top:(h-CAL_START)*CAL_PX_PER_MIN}}>{formatMinutes(h)}</div>)}</div>
-        {visibleDays.map(day=>{const blocks=dayBlocks(state.blocks,day); const today=isToday(state.weekStartIso,day); const sealed=!!state.week.daySeals[day]; const past=isPast(state.weekStartIso,day); return <div key={day} data-drop-day={day} data-calendar-day={day} className={`calendar-day-lane ${today?"today":""} ${past?"past":""} ${sealed?"sealed":""}`}>{hours.slice(0,-1).map(h=><span key={h} className="calendar-hour-line" style={{top:(h-CAL_START)*CAL_PX_PER_MIN}}/>)}{today&&nowLine&&<div className="calendar-now-line" style={{top:(nowLine.minutes-CAL_START)*CAL_PX_PER_MIN}}><span>{nowLine.label}</span></div>}{blocks.map((b,i)=>{const t=state.tasks[b.taskId]; if(!t)return null; const tier=getTier(t,b.tier); const start=calendarStart(b,i), duration=calendarDuration(b,tier); const top=(start-CAL_START)*CAL_PX_PER_MIN; const height=Math.max(36,duration*CAL_PX_PER_MIN); const hit=today&&nowLine&&nowLine.minutes>=start&&nowLine.minutes<=start+duration; return <div key={b.id} className={`calendar-event-shell ${hit?"beam-hit-shell":""}`} style={{top,height}}>{renderBlock(b,!!hit,true)}<button className="calendar-resize" title={`Resize duration · ${duration} min`} onPointerDown={e=>resizeTimeBlock(e,b)}><span>{duration}m</span></button></div>})}</div>})}
+        <div className="calendar-axis">{hours.map(h=><div key={h} className="calendar-hour-label" style={{top:(h-CAL_START)*CAL_PX_PER_MIN}}>{formatMinutes(h)}</div>)}</div>{nowLine&&beamGeom&&<div className={`calendar-beam ${beamGeom.hasTarget?"has-target":"no-target"}`} style={{top:beamGeom.top,left:beamGeom.left,width:beamGeom.width}}><span>{nowLine.label}</span><i className="beam-core"/><i className="beam-aura"/><i className="beam-sparks"/></div>}
+        {visibleDays.map(day=>{const blocks=dayBlocks(state.blocks,day); const today=isToday(state.weekStartIso,day); const sealed=!!state.week.daySeals[day]; const past=isPast(state.weekStartIso,day); return <div key={day} data-drop-day={day} data-calendar-day={day} className={`calendar-day-lane ${today?"today":""} ${past?"past":""} ${sealed?"sealed":""}`}>{hours.slice(0,-1).map(h=><span key={h} className="calendar-hour-line" style={{top:(h-CAL_START)*CAL_PX_PER_MIN}}/>)}{blocks.map((b,i)=>{const t=state.tasks[b.taskId]; if(!t)return null; const tier=getTier(t,b.tier); const meta=eventTimeMeta(b,i,tier); const top=(meta.start-CAL_START)*CAL_PX_PER_MIN; const height=Math.max(40,meta.duration*CAL_PX_PER_MIN); const hit=today&&nowLine&&nowLine.minutes>=meta.start&&nowLine.minutes<=meta.end; return <div key={b.id} data-event-id={b.id} className={`calendar-event-shell ${hit?"beam-hit-shell":""}`} style={{top,height}}>{renderBlock(b,!!hit,true,meta)}<button className="calendar-resize" title={`Resize duration · ${meta.duration} min`} onPointerDown={e=>resizeTimeBlock(e,b)}><span>{meta.duration}m</span></button></div>})}</div>})}
       </div>
     </div>;
   }
@@ -207,7 +274,7 @@ function App(){
   <div className="view-cluster"><button className={state.planningView==="blocks"?"active":""} onClick={()=>setState(s=>({...s,planningView:"blocks"}))}>Blocks</button><button className={state.planningView==="time"?"active":""} onClick={()=>setState(s=>({...s,planningView:"time"}))}>Time</button></div>
   {state.planningView==="time"&&<div className="time-filter-cluster">{(["morning","afternoon","both"] as TimeFilter[]).map(f=><button key={f} className={state.timeFilter===f?"active":""} onClick={()=>setState(s=>({...s,timeFilter:f}))}>{f}</button>)}</div>}
 </div><div className={`equilibrium ${r.status}`}><div><span className="eq-dot"/><strong>{r.status==="balanced"?"Balanced":r.status==="thinIce"?"Thin ice":"Red zone"}</strong><small>{r.netTension}</small></div><span className="eq-track"><i style={{width:`${Math.max(4,Math.min(100,45+r.netTension))}%`}}/></span>{r.sealDisabledReason&&<p>{r.sealDisabledReason}</p>}</div></div><div className="week-scroll">{state.planningView==="blocks"?<div className="week-row">{visibleDays.map(day=>renderDay(day))}</div>:renderTimeView()}</div></section></>}{state.activeView==="today"&&<Today state={state} blockAction={blockAction}/>} {state.activeView==="vault"&&<Vault state={state} exportPlan={exportPlan} fullWipe={fullWipe}/>}</section>
-    <nav className="bottom-nav">{(["plan","today","vault"] as const).map(v=><button key={v} className={state.activeView===v?"active":""} onClick={()=>setState(s=>({...s,activeView:v}))}>{v[0].toUpperCase()+v.slice(1)}</button>)}</nav>{state.toast&&<div className="toast glass-panel">{state.toast}</div>}{drag&&dragTask&&<div className="drag-overlay" style={{left:drag.x,top:drag.y}}><div className={`mini-card ${dragTask.accent}`}><span>{dragTask.icon}</span><strong>{dragTask.title}</strong></div></div>}
+    <nav className="bottom-nav">{(["plan","today","vault"] as const).map(v=><button key={v} className={state.activeView===v?"active":""} onClick={()=>setState(s=>({...s,activeView:v}))}>{v[0].toUpperCase()+v.slice(1)}</button>)}</nav>{state.toast&&<div className="toast glass-panel">{state.toast}</div>}{drag&&dragTask&&<div className="drag-overlay" style={{left:drag.x,top:drag.y}}><div className={`mini-card ${dragTask.accent}`}><span>{dragTask.icon}</span><strong>{dragTask.title}</strong></div></div>}{bursts.map(b=><div key={b.id} className={`completion-burst ${b.mode}`} style={{left:b.x,top:b.y}}>{Array.from({length:14},(_,i)=><span key={i} style={{["--i" as any]:i} as React.CSSProperties}/> )}</div>)}
   </main>;
 }
 function Today({state,blockAction}:{state:State;blockAction:(id:string,a:"tier"|"done"|"missed"|"remove"|"pause"|"review")=>void}){const blocks=dayBlocks(state.blocks,state.selectedDay); const current=blocks.find(b=>b.status==="planned"||b.status==="recoveryDue"); return <section className="today-panel glass-panel"><div className="today-head"><div className="today-ring"><span>{blocks.length?Math.round(blocks.filter(b=>b.status==="done"||b.status==="paused").length/blocks.length*100):0}%</span></div><div><h1>Today</h1><p>Assumed complete unless you report otherwise.</p></div></div>{current&&state.tasks[current.taskId]?<article className="today-current"><strong>{state.tasks[current.taskId].title}</strong><button onClick={()=>blockAction(current.id,"done")}>Done</button><button onClick={()=>blockAction(current.id,"missed")}>Missed</button></article>:<div className="quiet-empty">No active exception.</div>}<div className="today-queue">{blocks.map(b=>{const t=state.tasks[b.taskId]; return t?<div className={`queue-line ${b.status}`} key={b.id}><span>{t.icon}</span><strong>{t.title}</strong><small>{b.status}</small></div>:null;})}</div></section>}
