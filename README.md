@@ -1,8 +1,12 @@
-# Habit Planner RPG v20
+
+# Habit Planner RPG v21
 
 Updates in this pass:
 
-- Refined the Time-view laser so it is emitted from the Y-axis and stops at the active task card in the current day/time slot.
-- The target card now gets a focused metal-cutting effect with elegant particles, entry-point glow, and energized edge lighting.
-- The beam remains optimized and only appears for the current day and current active time band.
+- Reworked block interaction in both Blocks and Time views.
+- Clicking a block now opens an anchored interactive popover/tooltip instead of expanding the whole card.
+- Action controls are now visually grouped and easier to scan.
+- Added outside-click and Escape-to-close behavior for block popovers.
+- Reworked block spacing, hierarchy, and color separation so block type, state, and priority are easier to distinguish at a glance.
+- Added stronger per-type visual identities for Discipline, Reward, Recovery, Review, and Pause blocks.
 - No package-lock.json is included.
