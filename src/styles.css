@@ -2309,3 +2309,273 @@
   background:linear-gradient(180deg,rgba(255,255,255,.82),rgba(255,255,255,.54));
   border-color:rgba(15,23,42,.09);
 }
+
+/* v36 laptop week cockpit repair */
+.brand-copy small{display:none!important}
+.brand-copy{align-content:center}
+.brand-copy strong{font-size:15px;line-height:1.05;white-space:nowrap}
+
+.week-head{
+  overflow:visible;
+}
+
+/* Replace the bulky laptop header stack with a compact command cockpit. */
+@media (min-width:1180px){
+  .week-panel{
+    gap:10px;
+  }
+  .week-head{
+    display:grid!important;
+    grid-template-columns:minmax(210px,.56fr) minmax(560px,1fr);
+    grid-template-areas:
+      "intro controls"
+      "equilibrium controls";
+    gap:8px 12px;
+    align-items:start;
+    padding:0;
+  }
+  .week-head > div:first-child{
+    grid-area:intro;
+    min-width:0;
+    align-self:end;
+  }
+  .week-head h1{
+    font-size:clamp(30px,2.15vw,40px)!important;
+    line-height:.9;
+    letter-spacing:-.065em;
+  }
+  .week-head p{
+    max-width:460px;
+    margin-top:5px;
+    font-size:12px;
+    line-height:1.35;
+    opacity:.78;
+  }
+  .week-head > .equilibrium{
+    grid-area:equilibrium;
+    align-self:stretch;
+    min-height:42px;
+    padding:8px 10px;
+    display:grid;
+    grid-template-columns:minmax(118px,auto) minmax(0,1fr);
+    grid-template-areas:"label track" "reason reason";
+    gap:6px 10px;
+    border-radius:17px;
+    background:linear-gradient(180deg,rgba(255,255,255,.044),rgba(255,255,255,.018));
+    border-color:rgba(255,255,255,.075);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.045);
+  }
+  .equilibrium > div{
+    grid-area:label;
+    min-width:0;
+    align-self:center;
+  }
+  .equilibrium strong{
+    font-size:12px;
+  }
+  .equilibrium small{
+    margin-left:6px;
+    font-size:12px;
+  }
+  .eq-dot{
+    width:9px;
+    height:9px;
+  }
+  .eq-track{
+    grid-area:track;
+    align-self:center;
+    height:6px;
+    margin:0;
+    background:rgba(255,255,255,.07);
+  }
+  .equilibrium p{
+    grid-area:reason;
+    margin:0;
+    font-size:11px;
+  }
+  .week-head > .week-controls{
+    grid-area:controls;
+    align-self:stretch;
+  }
+  .week-controls{
+    width:100%;
+    min-height:92px;
+    display:grid!important;
+    grid-template-columns:minmax(300px,1fr) auto auto;
+    grid-template-areas:
+      "nav action view"
+      "nav time time";
+    align-content:center;
+    align-items:center;
+    justify-content:stretch;
+    gap:8px;
+    padding:10px;
+    border-radius:22px;
+    overflow:visible;
+    background:linear-gradient(180deg,rgba(255,255,255,.045),rgba(255,255,255,.018));
+    border:1px solid rgba(255,255,255,.07);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.045);
+  }
+  .week-nav-cluster{grid-area:nav}
+  .week-action-cluster{grid-area:action}
+  .view-cluster{grid-area:view}
+  .time-filter-cluster{grid-area:time}
+  .week-nav-cluster,.week-action-cluster,.view-cluster,.time-filter-cluster{
+    min-height:38px;
+    height:38px;
+    display:flex;
+    align-items:center;
+    min-width:0;
+    padding:4px;
+    border-radius:16px;
+    background:rgba(255,255,255,.038);
+    border:1px solid rgba(255,255,255,.065);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.04);
+  }
+  .week-nav-cluster{
+    height:84px;
+    min-height:84px;
+    align-self:stretch;
+    justify-content:space-between;
+    padding:6px;
+  }
+  .week-nav-cluster strong{
+    min-width:0!important;
+    flex:1 1 auto;
+    padding:0 12px;
+    font-size:13px;
+    text-align:center;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+  .week-action-cluster,.view-cluster,.time-filter-cluster{
+    justify-content:center;
+  }
+  .week-controls button{
+    height:30px;
+    padding:0 11px;
+    border-radius:12px;
+    font-size:12px;
+    background:transparent;
+    border:1px solid transparent;
+  }
+  .week-controls button:hover{
+    background:rgba(255,255,255,.06);
+    border-color:rgba(255,255,255,.08);
+  }
+  .week-controls .active{
+    color:var(--text);
+    background:linear-gradient(135deg,rgba(103,232,249,.17),rgba(177,140,255,.1));
+    border-color:rgba(103,232,249,.25);
+    box-shadow:0 0 0 1px rgba(103,232,249,.06),0 0 18px rgba(103,232,249,.07);
+  }
+  .time-filter-cluster{
+    justify-self:stretch!important;
+    grid-column:auto!important;
+  }
+  .time-filter-cluster button{
+    flex:1 1 0;
+    text-transform:capitalize;
+  }
+}
+
+/* Laptop/narrow desktop: keep hierarchy vertical but compact, not dashboard-like. */
+@media (min-width:1180px) and (max-width:1480px){
+  .week-head{
+    grid-template-columns:minmax(0,1fr) minmax(360px,.78fr);
+    grid-template-areas:
+      "intro equilibrium"
+      "controls controls";
+    gap:8px 10px;
+  }
+  .week-head > .equilibrium{
+    min-height:50px;
+    align-self:end;
+  }
+  .week-controls{
+    min-height:54px;
+    grid-template-columns:minmax(280px,1fr) auto auto auto;
+    grid-template-areas:"nav action view time";
+    padding:8px;
+  }
+  .week-nav-cluster{
+    height:38px;
+    min-height:38px;
+  }
+  .time-filter-cluster{
+    min-width:0;
+  }
+  .time-filter-cluster button{
+    padding:0 8px;
+  }
+}
+
+@media (min-width:1180px) and (max-width:1280px){
+  .week-head{
+    grid-template-columns:1fr;
+    grid-template-areas:
+      "intro"
+      "equilibrium"
+      "controls";
+  }
+  .week-head p{
+    max-width:100%;
+  }
+  .week-head > .equilibrium{
+    min-height:42px;
+  }
+  .week-controls{
+    grid-template-columns:minmax(250px,1fr) auto auto;
+    grid-template-areas:"nav action view" "time time time";
+    min-height:96px;
+  }
+  .time-filter-cluster{
+    width:100%;
+  }
+}
+
+@media (max-width:1179px){
+  .week-head{
+    grid-template-columns:1fr!important;
+    gap:8px;
+  }
+  .week-head h1{
+    font-size:32px!important;
+  }
+  .week-head p{
+    font-size:12px;
+    line-height:1.35;
+    margin-top:4px;
+  }
+  .week-head > .equilibrium{
+    padding:8px 10px;
+    display:grid;
+    grid-template-columns:minmax(110px,auto) minmax(0,1fr);
+    gap:6px 10px;
+  }
+  .eq-track{margin:0;align-self:center;height:6px}
+  .week-controls{
+    display:grid!important;
+    grid-template-columns:1fr auto auto;
+    gap:7px;
+    padding:8px;
+    min-height:0;
+  }
+  .week-nav-cluster,.week-action-cluster,.view-cluster,.time-filter-cluster{
+    min-height:38px;
+    height:38px;
+  }
+}
+
+@media (max-width:760px){
+  .week-controls{
+    grid-template-columns:1fr 1fr!important;
+  }
+  .week-nav-cluster,.time-filter-cluster{
+    grid-column:1 / -1;
+  }
+  .week-action-cluster,.view-cluster{
+    width:100%;
+  }
+}

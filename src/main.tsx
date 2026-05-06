@@ -293,7 +293,7 @@ function App(){
       <div className="topbar-start">
         <button className="brand" onClick={()=>setState(s=>({...s,activeView:"plan"}))}>
           <span className="brand-mark">◆</span>
-          <span className="brand-copy"><strong>Habit Planner</strong><small>calm RPG planning</small></span>
+          <span className="brand-copy"><strong>Habit Planner</strong></span>
         </button>
       </div>
       <div className="top-status">
