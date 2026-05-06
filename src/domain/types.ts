@@ -81,3 +81,10 @@ export interface PlannerState {
 export interface PlannerSnapshot extends PlannerState {
   exportedAt: string;
 }
+
+export interface ActionBankSnapshot {
+  schemaVersion: 6;
+  kind: "habit-action-bank";
+  exportedAt: string;
+  tasks: Record<string, HabitTask>;
+}

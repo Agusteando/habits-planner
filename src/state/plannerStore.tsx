@@ -15,7 +15,7 @@ import {
   REVIEW_WINDOW_MS,
   SOS_LOCK_MS
 } from "../domain/rules";
-import { DayKey, HabitTask, PlannerSnapshot, PlannerState, ScheduledBlock } from "../domain/types";
+import { ActionBankSnapshot, DayKey, HabitTask, PlannerSnapshot, PlannerState, ScheduledBlock } from "../domain/types";
 
 const STORAGE_KEY = "habit-planner-rpg-v6";
 
@@ -36,6 +36,7 @@ type Action =
   | { type: "OPEN_REVIEW"; blockId: string }
   | { type: "STARTER_WEEK" }
   | { type: "IMPORT"; snapshot: PlannerSnapshot }
+  | { type: "IMPORT_ACTION_BANK"; snapshot: ActionBankSnapshot }
   | { type: "TOAST"; toast?: string };
 
 function baseState(): PlannerState {
@@ -59,6 +60,22 @@ function validateSnapshot(input: unknown): PlannerSnapshot {
   if (!snapshot.player || !snapshot.week) throw new Error("Plan is missing state.");
   if (!snapshot.selectedDay || !DAYS.includes(snapshot.selectedDay)) throw new Error("Plan has an invalid day.");
   return snapshot as PlannerSnapshot;
+}
+
+function validateActionBankSnapshot(input: unknown): ActionBankSnapshot {
+  if (!input || typeof input !== "object") throw new Error("Invalid action bank file.");
+  const snapshot = input as Partial<ActionBankSnapshot>;
+  if (snapshot.schemaVersion !== 6) throw new Error("Unsupported action bank version.");
+  if (snapshot.kind !== "habit-action-bank") throw new Error("This is not an action bank file.");
+  if (!snapshot.tasks || typeof snapshot.tasks !== "object") throw new Error("Action bank is missing tasks.");
+
+  for (const task of Object.values(snapshot.tasks) as HabitTask[]) {
+    if (!task.id || !task.title || !task.kind || !Array.isArray(task.tiers) || task.tiers.length === 0) {
+      throw new Error("Action bank contains an invalid task.");
+    }
+  }
+
+  return snapshot as ActionBankSnapshot;
 }
 
 function loadState(): PlannerState {
@@ -315,6 +332,13 @@ function reducer(state: PlannerState, action: Action): PlannerState {
         toast: "Plan imported."
       };
 
+    case "IMPORT_ACTION_BANK":
+      return {
+        ...state,
+        tasks: { ...state.tasks, ...action.snapshot.tasks },
+        toast: "Action bank imported."
+      };
+
     case "TOAST":
       return { ...state, toast: action.toast };
 
@@ -329,8 +353,12 @@ interface PlannerContextValue {
   dispatch: React.Dispatch<Action>;
   canEdit: boolean;
   makeSnapshot: () => PlannerSnapshot;
+  makeActionBankSnapshot: () => ActionBankSnapshot;
   importFile: (file: File) => Promise<void>;
+  importActionBankFile: (file: File) => Promise<void>;
   exportPlan: () => void;
+  exportActionBank: () => void;
+  exportActionBankTemplate: () => void;
 }
 
 const PlannerContext = createContext<PlannerContextValue | null>(null);
@@ -358,10 +386,23 @@ export function PlannerProvider({ children }: { children: React.ReactNode }) {
     toast: undefined
   }), [state]);
 
+  const makeActionBankSnapshot = useCallback((): ActionBankSnapshot => ({
+    schemaVersion: 6,
+    kind: "habit-action-bank",
+    exportedAt: new Date().toISOString(),
+    tasks: state.tasks
+  }), [state.tasks]);
+
   const importFile = useCallback(async (file: File) => {
     const text = await file.text();
     const parsed = JSON.parse(text);
     dispatch({ type: "IMPORT", snapshot: validateSnapshot(parsed) });
+  }, []);
+
+  const importActionBankFile = useCallback(async (file: File) => {
+    const text = await file.text();
+    const parsed = JSON.parse(text);
+    dispatch({ type: "IMPORT_ACTION_BANK", snapshot: validateActionBankSnapshot(parsed) });
   }, []);
 
   const exportPlan = useCallback(() => {
@@ -378,7 +419,60 @@ export function PlannerProvider({ children }: { children: React.ReactNode }) {
     URL.revokeObjectURL(url);
   }, [makeSnapshot]);
 
-  const value = useMemo(() => ({ state, report, dispatch, canEdit, makeSnapshot, importFile, exportPlan }), [state, report, canEdit, makeSnapshot, importFile, exportPlan]);
+  const exportActionBank = useCallback(() => {
+    const snapshot = makeActionBankSnapshot();
+    const blob = new Blob([JSON.stringify(snapshot, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const stamp = new Date().toISOString().slice(0, 10);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = `habit-action-bank-${stamp}.json`;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(url);
+  }, [makeActionBankSnapshot]);
+
+  const exportActionBankTemplate = useCallback(() => {
+    const firstTask = Object.values(taskTemplates)[0];
+    const template: ActionBankSnapshot = {
+      schemaVersion: 6,
+      kind: "habit-action-bank",
+      exportedAt: new Date().toISOString(),
+      tasks: {
+        example_custom_action: {
+          ...firstTask,
+          id: "example_custom_action",
+          title: "Example Custom Action",
+          icon: "✧",
+          category: "Focus",
+          kind: "discipline",
+          tokenCost: 0,
+          tokenEarn: 1,
+          accent: "cyan",
+          tiers: [
+            { level: 1, label: "Minimum version", minutes: 5, xp: 10, tension: 4, relief: 0 },
+            { level: 2, label: "Standard version", minutes: 20, xp: 30, tension: 16, relief: 0 },
+            { level: 3, label: "Deep version", minutes: 45, xp: 60, tension: 34, relief: 0 }
+          ]
+        }
+      }
+    };
+    const blob = new Blob([JSON.stringify(template, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = "habit-action-bank-template.json";
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(url);
+  }, []);
+
+  const value = useMemo(
+    () => ({ state, report, dispatch, canEdit, makeSnapshot, makeActionBankSnapshot, importFile, importActionBankFile, exportPlan, exportActionBank, exportActionBankTemplate }),
+    [state, report, canEdit, makeSnapshot, makeActionBankSnapshot, importFile, importActionBankFile, exportPlan, exportActionBank, exportActionBankTemplate]
+  );
 
   return <PlannerContext.Provider value={value}>{children}</PlannerContext.Provider>;
 }

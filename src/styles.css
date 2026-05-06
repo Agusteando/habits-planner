@@ -124,7 +124,7 @@ button:disabled { opacity: .42; cursor: not-allowed; }
   background: rgba(255,255,255,.06);
   border: 1px solid rgba(255,255,255,.08);
   color: var(--muted);
-  font-size: 13px;
+  font-size: 14px;
 }
 .seal-action {
   color: #06110e;
@@ -234,21 +234,24 @@ button:disabled { opacity: .42; cursor: not-allowed; }
 
 .week-scroll {
   min-height: 0;
+  height: 100%;
   overflow-x: auto;
   overflow-y: hidden;
   padding-bottom: 3px;
   scrollbar-color: rgba(255,255,255,.16) transparent;
 }
 .week-row {
-  min-height: 100%;
-  width: max(100%, 1120px);
+  height: 100%;
+  min-height: 0;
+  width: max(100%, 1470px);
   display: grid;
-  grid-template-columns: repeat(7, minmax(148px, 1fr));
+  grid-template-columns: repeat(7, minmax(180px, 1fr));
   gap: clamp(8px, .8vw, 12px);
 }
 
 .day-column {
   min-height: 0;
+  height: 100%;
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
   border-radius: clamp(18px, 1.4vw, 24px);
@@ -297,12 +300,14 @@ button:disabled { opacity: .42; cursor: not-allowed; }
 }
 .day-stack {
   min-height: 0;
+  height: 100%;
   padding: 10px;
   display: grid;
-  gap: 10px;
+  gap: 11px;
   align-content: start;
   overflow-y: auto;
   overflow-x: hidden;
+  overscroll-behavior: contain;
   scrollbar-color: rgba(255,255,255,.14) transparent;
 }
 .drop-hint {
@@ -324,7 +329,7 @@ button:disabled { opacity: .42; cursor: not-allowed; }
 
 .block-card {
   position: relative;
-  min-height: 82px;
+  min-height: 98px;
   padding: 10px;
   display: grid;
   grid-template-rows: auto;
@@ -367,14 +372,14 @@ button:disabled { opacity: .42; cursor: not-allowed; }
 .block-main {
   min-width: 0;
   display: grid;
-  grid-template-columns: 34px minmax(0, 1fr);
+  grid-template-columns: 40px minmax(0, 1fr);
   gap: 8px;
   align-items: center;
   padding-left: 14px;
 }
 .block-icon {
-  width: 34px;
-  height: 34px;
+  width: 40px;
+  height: 40px;
   display: grid;
   place-items: center;
   border-radius: 13px;
@@ -422,7 +427,7 @@ button:disabled { opacity: .42; cursor: not-allowed; }
 .status-pill.paused { color: var(--silver); }
 .status-pill.recoveryDue { color: var(--amber); }
 .block-card.expanded {
-  min-height: 122px;
+  min-height: 152px;
   border-color: rgba(103,232,249,.28);
   box-shadow: 0 16px 42px rgba(0,0,0,.32), 0 0 24px rgba(103,232,249,.1), inset 0 1px 0 rgba(255,255,255,.08);
 }
@@ -461,10 +466,10 @@ button:disabled { opacity: .42; cursor: not-allowed; }
 
 .action-bank {
   order: 2;
-  min-height: clamp(116px, 17dvh, 168px);
+  min-height: clamp(168px, 24dvh, 240px);
   padding: clamp(9px, 1vw, 12px);
   display: grid;
-  grid-template-rows: auto auto minmax(0, 1fr);
+  grid-template-rows: auto auto auto auto minmax(0, 1fr);
   gap: 8px;
 }
 .bank-head {
@@ -475,6 +480,53 @@ button:disabled { opacity: .42; cursor: not-allowed; }
 }
 .bank-head strong { font-size: 14px; }
 .bank-head span { color: var(--muted); font-size: 12px; }
+.bank-search {
+  height: 38px;
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr);
+  align-items: center;
+  gap: 6px;
+  padding: 0 10px;
+  border-radius: 14px;
+  background: rgba(255,255,255,.056);
+  border: 1px solid rgba(255,255,255,.075);
+  color: var(--muted);
+}
+
+.bank-search input {
+  min-width: 0;
+  width: 100%;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--text);
+}
+
+.bank-search input::placeholder {
+  color: rgba(155,164,194,.78);
+}
+
+.bank-tools {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.bank-tools button {
+  height: 32px;
+  border-radius: 12px;
+  background: rgba(255,255,255,.055);
+  border: 1px solid rgba(255,255,255,.075);
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 760;
+}
+
+.bank-tools button:hover {
+  color: var(--text);
+  border-color: rgba(103,232,249,.24);
+}
+
 .chip-row {
   display: flex;
   gap: 7px;
@@ -500,6 +552,7 @@ button:disabled { opacity: .42; cursor: not-allowed; }
 }
 .bank-strip {
   min-height: 0;
+  height: 100%;
   display: flex;
   gap: 9px;
   overflow-x: auto;
@@ -512,7 +565,7 @@ button:disabled { opacity: .42; cursor: not-allowed; }
   min-height: 62px;
   padding: 9px;
   display: grid;
-  grid-template-columns: 34px minmax(0, 1fr);
+  grid-template-columns: 40px minmax(0, 1fr);
   gap: 8px;
   align-items: center;
   border-radius: 17px;
@@ -525,8 +578,8 @@ button:disabled { opacity: .42; cursor: not-allowed; }
 }
 .bank-card.reward { border-color: rgba(177,140,255,.24); }
 .bank-icon {
-  width: 34px;
-  height: 34px;
+  width: 40px;
+  height: 40px;
   display: grid;
   place-items: center;
   border-radius: 12px;
@@ -736,7 +789,7 @@ button:disabled { opacity: .42; cursor: not-allowed; }
     order: 1;
     min-height: 0;
     height: 100%;
-    grid-template-rows: auto auto minmax(0, 1fr);
+    grid-template-rows: auto auto auto auto minmax(0, 1fr);
     align-self: stretch;
   }
 
@@ -784,17 +837,17 @@ button:disabled { opacity: .42; cursor: not-allowed; }
   }
   .week-row {
     width: max(100%, 1960px);
-    grid-template-columns: repeat(7, minmax(260px, 1fr));
+    grid-template-columns: repeat(7, minmax(286px, 1fr));
   }
   .day-column {
     min-height: 100%;
   }
   .block-card {
-    min-height: 86px;
+    min-height: 100px;
   }
 
   .block-card.expanded {
-    min-height: 126px;
+    min-height: 150px;
   }
 }
 
@@ -816,7 +869,7 @@ button:disabled { opacity: .42; cursor: not-allowed; }
   }
   .week-row {
     width: max(100%, 1848px);
-    grid-template-columns: repeat(7, minmax(248px, 1fr));
+    grid-template-columns: repeat(7, minmax(272px, 1fr));
   }
   .day-stack {
     padding: 9px;
@@ -826,7 +879,7 @@ button:disabled { opacity: .42; cursor: not-allowed; }
     padding: 0 6px;
   }
   .action-bank {
-    min-height: 150px;
+    min-height: 210px;
   }
   .bank-card {
     flex-basis: 166px;
@@ -852,12 +905,12 @@ button:disabled { opacity: .42; cursor: not-allowed; }
   }
 
   .block-card {
-    min-height: 80px;
+    min-height: 94px;
     padding: 8px;
   }
 
   .block-card.expanded {
-    min-height: 120px;
+    min-height: 144px;
   }
 
   .block-actions button {
