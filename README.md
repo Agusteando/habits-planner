@@ -1,19 +1,16 @@
-# Habit Planner RPG v15
+
+# Habit Planner RPG v16
 
 Updates in this pass:
 
-- Review blocks are guarded. They cannot be spent unless a day or week is currently sealed.
-- Unseal is guarded. It only works for sealed days, and only while Review is active.
-- Sealing a day automatically creates a protected Review block on that day.
-- Sealing the week automatically creates a protected Review block on Sunday.
-- Review Gate also creates a visible Review block with the same countdown.
-- When Review takes effect, the Review block and affected Kanban surface get a visible active state.
-- The default planning surface remains the block-first Kanban.
-- A separate compressed Time lens is now available from the Week controls.
-- Time lens supports compressed bands such as 5–7 AM, 7–9 AM, etc.
-- Time lens supports Morning, Afternoon, and Both filters.
-- Dragging a block/action into a time band assigns that band.
-- Review, Pause, and Recovery remain protected system blocks.
+- Reworked the Time view into a focused single-day timeline so a full day fits cleanly in the main panel.
+- Added a true Y-axis time layout with compressed time bands.
+- Added a live current-time beam for the selected day when that day is today.
+- When the beam crosses a task row, the row lights up and task cards receive an energized laser-cut effect with particles.
+- Time rows use horizontal card lanes so the day still fits on screen even with multiple tasks in the same band.
+- The default Kanban remains the main block-first planning view.
+- Morning / Afternoon / Both filters remain available in the Time lens.
+- Dragging into a time row assigns that time band.
 - No package-lock.json is included.
 
 Run:
@@ -23,8 +20,8 @@ npm install
 npm run dev
 ```
 
-Storage migrates from v14/v13/v12/v11 when available and persists to:
+Storage migrates from v15/v14/v13/v12/v11 when available and persists to:
 
 ```txt
-habit-planner-rpg-v15
+habit-planner-rpg-v16
 ```
