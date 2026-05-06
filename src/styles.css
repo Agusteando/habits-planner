@@ -669,3 +669,34 @@
 :root[data-theme="light"] .block-card.discipline{background:radial-gradient(circle at 10% -15%,rgba(103,232,249,.13),transparent 44%),linear-gradient(135deg,rgba(255,255,255,.96),rgba(255,255,255,.74))}
 :root[data-theme="light"] .block-card.reward{background:radial-gradient(circle at 10% -15%,rgba(177,140,255,.13),transparent 44%),linear-gradient(135deg,rgba(255,255,255,.96),rgba(255,255,255,.74))}
 :root[data-theme="light"] .block-card.recovery,:root[data-theme="light"] .block-card.review,:root[data-theme="light"] .block-card.pause{background:linear-gradient(135deg,rgba(255,255,255,.96),rgba(255,255,255,.74))}
+
+/* v22 time-column alignment fix */
+.time-kanban-cell{padding:8px 10px 8px 8px}
+.time-cell-stack{padding-left:24px;padding-right:0;overflow-x:hidden;align-items:stretch}
+.time-cell-stack .time-card{
+  width:100%;
+  min-width:0;
+  max-width:none;
+  margin-left:0;
+  justify-self:stretch;
+}
+.time-cell-stack .time-drop{
+  width:100%;
+  min-width:0;
+}
+.time-card .block-popover{
+  left:0;
+  right:0;
+}
+.slot-beam.axis-beam{left:8px;width:42px}
+.slot-beam.axis-beam .beam-core{width:38px}
+.slot-beam.axis-beam .beam-aura{width:46px}
+.slot-beam.axis-beam .beam-sparks{left:30px}
+@media (max-width:680px){
+  .time-kanban-cell{padding:7px 8px 7px 7px}
+  .time-cell-stack{padding-left:20px}
+  .slot-beam.axis-beam{left:7px;width:34px}
+  .slot-beam.axis-beam .beam-core{width:30px}
+  .slot-beam.axis-beam .beam-aura{width:36px}
+  .slot-beam.axis-beam .beam-sparks{left:22px}
+}
