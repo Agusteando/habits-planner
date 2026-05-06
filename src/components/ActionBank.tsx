@@ -1,0 +1,5 @@
+import { useMemo, useState } from "react";
+import { usePlanner } from "../state/PlannerContext";
+import { BlockCard } from "./BlockCard";
+const chips = ["All", "Body", "Food", "Focus", "Dopa", "Recovery"] as const;
+export function ActionBank({ rail = false }: { rail?: boolean }) { const { tasks } = usePlanner(); const [chip, setChip] = useState<(typeof chips)[number]>("All"); const [query, setQuery] = useState(""); const visible = useMemo(() => Object.values(tasks).filter((t) => (chip === "All" || t.category === chip) && (!query.trim() || t.title.toLowerCase().includes(query.toLowerCase()))), [tasks, chip, query]); return <section className={`action-bank ${rail ? "rail" : ""}`}><label className="search">⌕<input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Find action" /></label><div className="chips">{chips.map((c) => <button key={c} className={chip === c ? "active" : ""} onClick={() => setChip(c)}>{c}</button>)}</div><div className="bank-grid">{visible.map((task) => <BlockCard key={task.id} task={task} bank compact={rail} />)}</div></section>; }
