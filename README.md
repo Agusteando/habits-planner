@@ -1,10 +1,11 @@
-# Habit Planner RPG v25
+
+# Habit Planner RPG v26
 
 Updates in this pass:
 
-- Reworked the Time-view beam so it spans from the Y-axis across the row toward the current day.
-- If the active current-day slot has a block, the beam stops at that day and the target block still gets the hit glow.
-- If the active current-day slot has no blocks, the beam extends end-to-end across the full row.
-- Added a direct Add button on Action Bank cards so adding blocks works even without drag-and-drop.
-- Quick add places the action into the selected day, and in Time view it uses the current active time band when available.
+- Block popovers now open as true overlays to the right of the clicked block instead of being constrained inside the Kanban column.
+- Popovers now render outside the column flow with a more comfortable size for scanning and action-taking.
+- Added viewport-aware placement with a strong right-side preference.
+- Popovers close on outside click, Escape, resize, or scroll.
+- On small screens, popovers fall back to a bottom-sheet style overlay.
 - No package-lock.json is included.
