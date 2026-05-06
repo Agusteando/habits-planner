@@ -1,18 +1,16 @@
-# Habit Planner RPG v6
+# Habit Planner RPG v7
 
-A full React + TypeScript frontend focused on the corrected core UX:
+This version focuses on the corrected layout model:
 
-- Empty week by default when no stored plan exists.
-- Horizontal one-row week Kanban as the main planning surface.
-- No forced responsive wrapping of the week board.
-- Day columns preserve usable width and horizontally scroll when needed.
-- Blocks stack vertically inside each day and remain readable with multiple items.
-- Calendar block controls use text labels: Tier, Done, Missed, Remove, Review, Pause.
-- Completion is exception-based: the app assumes the plan went right unless the user reports otherwise.
-- Review blocks are first-class blocks with countdowns. When ready, they unlock a short edit window before resealing.
-- Pause blocks are first-class blocks that pause the rest of the day without treating it as failure.
-- Import/export are real JSON snapshots.
-- Local persistence is isolated under `habit-planner-rpg-v6`.
+- The Action Bank is a persistent left rail on desktop.
+- The week board remains a single horizontal row of seven days.
+- The board scrolls horizontally when needed instead of wrapping or squeezing.
+- Blocks keep a readable calm default state.
+- Block actions are hidden until the user clicks/taps a block or the “Adjust” affordance.
+- Actions remain text-based when revealed: Tier, Done, Missed, Remove, Review, Pause rest.
+- Empty stored state still starts with a blank week.
+- Review and Pause blocks remain first-class planning blocks.
+- Import/export and local persistence remain real.
 
 Run:
 

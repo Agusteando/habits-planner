@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { countdownText, getTier, isReviewReady } from "../domain/rules";
 import { HabitTask, ScheduledBlock } from "../domain/types";
 import { usePlanner } from "../state/plannerStore";
@@ -11,6 +12,7 @@ interface Props {
 export function BlockCard({ block, task }: Props) {
   const { dispatch, canEdit } = usePlanner();
   const { beginDrag } = useDragLayer();
+  const [expanded, setExpanded] = useState(false);
   const tier = getTier(task, block.tier);
   const ready = task.kind === "review" && isReviewReady(block);
   const reviewCountdown = task.kind === "review" ? countdownText(block.reviewUnlockAt) : undefined;
@@ -29,7 +31,14 @@ export function BlockCard({ block, task }: Props) {
               : "Assumed OK";
 
   return (
-    <article className={`block-card ${task.kind} ${task.accent} ${block.status}`} data-drop-block={block.id}>
+    <article
+      className={`block-card ${task.kind} ${task.accent} ${block.status} ${expanded ? "expanded" : ""}`}
+      data-drop-block={block.id}
+      onClick={(event) => {
+        event.stopPropagation();
+        setExpanded(true);
+      }}
+    >
       <button
         className="drag-handle"
         aria-label={`Move ${task.title}`}
@@ -49,7 +58,21 @@ export function BlockCard({ block, task }: Props) {
         </div>
       </div>
 
-      <div className="block-actions">
+      <div className="block-quick">
+        <span>{task.kind === "review" ? "Planned edit window" : task.kind === "pause" ? "Stops the remaining day" : "No action needed unless reality differs."}</span>
+        <button
+          type="button"
+          onClick={(event) => {
+            event.stopPropagation();
+            setExpanded((value) => !value);
+          }}
+        >
+          {expanded ? "Close" : "Adjust"}
+        </button>
+      </div>
+
+      {expanded && (
+        <div className="block-actions" onClick={(event) => event.stopPropagation()}>
         {task.kind === "review" ? (
           <>
             <button disabled={!ready} onClick={() => dispatch({ type: "OPEN_REVIEW", blockId: block.id })}>
@@ -72,7 +95,8 @@ export function BlockCard({ block, task }: Props) {
             <button disabled={!canEdit} onClick={() => dispatch({ type: "DELETE_BLOCK", blockId: block.id })}>Remove</button>
           </>
         )}
-      </div>
+        </div>
+      )}
     </article>
   );
 }

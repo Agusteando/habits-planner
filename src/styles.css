@@ -143,10 +143,18 @@ button:disabled { opacity: .42; cursor: not-allowed; }
   min-height: 0;
   display: grid;
   gap: clamp(8px, 1vw, 12px);
+}
+
+.plan-workspace {
   grid-template-rows: minmax(0, 1fr) auto;
 }
 
+.single-workspace {
+  grid-template-rows: minmax(0, 1fr);
+}
+
 .week-panel {
+  order: 1;
   min-height: 0;
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
@@ -326,11 +334,11 @@ button:disabled { opacity: .42; cursor: not-allowed; }
 
 .block-card {
   position: relative;
-  min-height: 128px;
+  min-height: 106px;
   padding: 10px;
   display: grid;
-  grid-template-rows: auto auto;
-  gap: 9px;
+  grid-template-rows: auto auto auto;
+  gap: 8px;
   border-radius: 18px;
   border: 1px solid rgba(255,255,255,.11);
   background:
@@ -419,10 +427,43 @@ button:disabled { opacity: .42; cursor: not-allowed; }
 .status-pill.missed { color: var(--rose); }
 .status-pill.paused { color: var(--silver); }
 .status-pill.recoveryDue { color: var(--amber); }
+.block-quick {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+  padding-left: 14px;
+}
+
+.block-quick span {
+  min-width: 0;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.25;
+}
+
+.block-quick button {
+  height: 30px;
+  padding: 0 10px;
+  border-radius: 11px;
+  background: rgba(255,255,255,.065);
+  border: 1px solid rgba(255,255,255,.08);
+  color: var(--text);
+  font-size: 11px;
+  font-weight: 780;
+}
+
+.block-card.expanded {
+  min-height: 150px;
+  border-color: rgba(103,232,249,.28);
+  box-shadow: 0 16px 42px rgba(0,0,0,.32), 0 0 24px rgba(103,232,249,.1), inset 0 1px 0 rgba(255,255,255,.08);
+}
+
 .block-actions {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 7px;
+  padding-left: 14px;
 }
 .block-actions button {
   min-height: 34px;
@@ -440,6 +481,7 @@ button:disabled { opacity: .42; cursor: not-allowed; }
 .block-actions button:nth-child(4) { color: var(--muted); }
 
 .action-bank {
+  order: 2;
   min-height: clamp(116px, 17dvh, 168px);
   padding: clamp(9px, 1vw, 12px);
   display: grid;
@@ -696,11 +738,51 @@ button:disabled { opacity: .42; cursor: not-allowed; }
 
 @media (min-width: 1180px) {
   .bottom-nav { display: none; }
+
   .app-shell {
     grid-template-rows: auto minmax(0, 1fr);
   }
-  .workspace {
-    grid-template-rows: minmax(0, 1fr) auto;
+
+  .plan-workspace {
+    grid-template-columns: clamp(260px, 21vw, 340px) minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr);
+    align-items: stretch;
+  }
+
+  .single-workspace {
+    grid-template-rows: minmax(0, 1fr);
+  }
+
+  .action-bank {
+    order: 1;
+    min-height: 0;
+    height: 100%;
+    grid-template-rows: auto auto minmax(0, 1fr);
+    align-self: stretch;
+  }
+
+  .week-panel {
+    order: 2;
+    min-width: 0;
+  }
+
+  .bank-strip {
+    display: grid;
+    grid-template-columns: 1fr;
+    align-content: start;
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+
+  .bank-card {
+    flex: none;
+    width: 100%;
+    min-height: 66px;
+  }
+
+  .week-row {
+    width: max(100%, 1260px);
+    grid-template-columns: repeat(7, minmax(176px, 1fr));
   }
 }
 
@@ -729,7 +811,11 @@ button:disabled { opacity: .42; cursor: not-allowed; }
     min-height: 100%;
   }
   .block-card {
-    min-height: 132px;
+    min-height: 112px;
+  }
+
+  .block-card.expanded {
+    min-height: 154px;
   }
 }
 
@@ -765,5 +851,38 @@ button:disabled { opacity: .42; cursor: not-allowed; }
   }
   .bank-card {
     flex-basis: 166px;
+  }
+}
+
+@media (min-width: 1180px) and (max-width: 1439px) {
+  .top-status span {
+    height: 28px;
+    padding: 0 8px;
+  }
+
+  .week-head {
+    grid-template-columns: minmax(0, 1fr) minmax(190px, 280px);
+  }
+
+  .week-head h1 {
+    font-size: clamp(30px, 2.8vw, 40px);
+  }
+
+  .week-head p {
+    max-width: 560px;
+  }
+
+  .block-card {
+    min-height: 102px;
+    padding: 9px;
+  }
+
+  .block-card.expanded {
+    min-height: 148px;
+  }
+
+  .block-actions button {
+    min-height: 32px;
+    font-size: 10.5px;
   }
 }

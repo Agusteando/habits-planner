@@ -38,11 +38,11 @@ export function App() {
       <main className="app-shell">
         <TopBar />
 
-        <section className="workspace">
+        <section className={`workspace ${state.activeView === "plan" ? "plan-workspace" : "single-workspace"}`}>
           {state.activeView === "plan" && (
             <>
-              <WeekBoard />
               <ActionBank />
+              <WeekBoard />
             </>
           )}
           {state.activeView === "today" && <TodayView />}
