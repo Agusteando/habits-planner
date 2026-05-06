@@ -1,26 +1,30 @@
-# Habit Planner RPG v7
+# Habit Planner RPG v8
 
-This version focuses on the corrected layout model:
+Focused correction:
 
-- The Action Bank is a persistent left rail on desktop.
+- Block cards are compact by default.
+- No permanent “Adjust” row.
+- No permanent explanatory text inside each block.
+- Tap/click a block to reveal its text actions.
+- Tap/click again to collapse it.
+- Day-level SOS button removed from the Kanban.
+- Review and Pause blocks remain, but they are represented compactly.
+- The Action Bank remains on the left rail on desktop.
 - The week board remains a single horizontal row of seven days.
-- The board scrolls horizontally when needed instead of wrapping or squeezing.
-- Blocks keep a readable calm default state.
-- Block actions are hidden until the user clicks/taps a block or the “Adjust” affordance.
-- Actions remain text-based when revealed: Tier, Done, Missed, Remove, Review, Pause rest.
-- Empty stored state still starts with a blank week.
-- Review and Pause blocks remain first-class planning blocks.
-- Import/export and local persistence remain real.
+
+Use:
+
+1. Drag an action from the Action Bank into a day.
+2. Arrange blocks by dragging them between days or onto another block.
+3. Seal the plan when the week is balanced.
+4. Follow the plan normally. The app assumes things went right unless you report otherwise.
+5. Tap a block only when you need to act on it: mark Done, report Missed, change Tier, Remove, open Review, or apply Pause.
+6. Use Review blocks as planned edit permissions. When their countdown reaches Ready, tap the block and open Review.
+7. Use Pause blocks as planned stop points. Tapping Pause rest pauses the remaining blocks for that day.
 
 Run:
 
 ```bash
 npm install
 npm run dev
-```
-
-Build:
-
-```bash
-npm run build
 ```

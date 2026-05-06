@@ -24,12 +24,6 @@ export function DayColumn({ day }: { day: DayKey }) {
           <strong>{shortDayLabel(day)}</strong>
           <small>{blocks.length ? `${blocks.length} blocks` : "drop actions"}</small>
         </div>
-        <button className="day-sos" onClick={(event) => {
-          event.stopPropagation();
-          dispatch({ type: "DOWNSHIFT_DAY", day });
-        }}>
-          SOS
-        </button>
       </header>
 
       <div className="day-stack">

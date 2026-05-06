@@ -28,7 +28,7 @@ export function BlockCard({ block, task }: Props) {
             ? "Recovery"
             : task.kind === "review"
               ? reviewCountdown
-              : "Assumed OK";
+              : "OK";
 
   return (
     <article
@@ -36,7 +36,7 @@ export function BlockCard({ block, task }: Props) {
       data-drop-block={block.id}
       onClick={(event) => {
         event.stopPropagation();
-        setExpanded(true);
+        setExpanded((value) => !value);
       }}
     >
       <button
@@ -56,19 +56,6 @@ export function BlockCard({ block, task }: Props) {
           </div>
           <small>{tier.label} · {tier.minutes ? `${tier.minutes}m` : "no timer"}</small>
         </div>
-      </div>
-
-      <div className="block-quick">
-        <span>{task.kind === "review" ? "Planned edit window" : task.kind === "pause" ? "Stops the remaining day" : "No action needed unless reality differs."}</span>
-        <button
-          type="button"
-          onClick={(event) => {
-            event.stopPropagation();
-            setExpanded((value) => !value);
-          }}
-        >
-          {expanded ? "Close" : "Adjust"}
-        </button>
       </div>
 
       {expanded && (
