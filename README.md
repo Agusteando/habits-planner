@@ -1,16 +1,12 @@
 
-# Habit Planner RPG v16
+# Habit Planner RPG v17
 
-Updates in this pass:
+Patch:
 
-- Reworked the Time view into a focused single-day timeline so a full day fits cleanly in the main panel.
-- Added a true Y-axis time layout with compressed time bands.
-- Added a live current-time beam for the selected day when that day is today.
-- When the beam crosses a task row, the row lights up and task cards receive an energized laser-cut effect with particles.
-- Time rows use horizontal card lanes so the day still fits on screen even with multiple tasks in the same band.
-- The default Kanban remains the main block-first planning view.
-- Morning / Afternoon / Both filters remain available in the Time lens.
-- Dragging into a time row assigns that time band.
+- Reset progress is no longer hidden behind mobile-only navigation.
+- Added a visible Vault shortcut to the top bar.
+- Added Reset progress directly inside the top More menu.
+- The original Vault reset card remains.
 - No package-lock.json is included.
 
 Run:
@@ -20,8 +16,8 @@ npm install
 npm run dev
 ```
 
-Storage migrates from v15/v14/v13/v12/v11 when available and persists to:
+Storage migrates from v16/v15/v14/v13/v12/v11 and persists to:
 
 ```txt
-habit-planner-rpg-v16
+habit-planner-rpg-v17
 ```

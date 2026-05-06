@@ -239,3 +239,16 @@
 :root[data-theme="light"] .time-row-track{background:rgba(255,255,255,.68);border-color:rgba(15,23,42,.08)}
 :root[data-theme="light"] .time-row-track::before{background:linear-gradient(90deg,rgba(15,23,42,.06),rgba(15,23,42,.16),rgba(15,23,42,.06))}
 :root[data-theme="light"] .time-now-line span{background:rgba(255,255,255,.96)}
+
+
+.danger-menu{
+  color:var(--rose)!important;
+  border-color:rgba(255,107,159,.24)!important;
+  background:rgba(255,107,159,.09)!important;
+}
+.nav-shortcut{
+  color:var(--text);
+}
+@media (max-width: 520px){
+  .nav-shortcut{display:none}
+}

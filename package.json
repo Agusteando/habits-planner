@@ -1,7 +1,7 @@
 {
-  "name": "habit-planner-rpg-v16",
+  "name": "habit-planner-rpg-v17",
   "private": true,
-  "version": "1.6.0",
+  "version": "1.7.0",
   "type": "module",
   "scripts": {
     "dev": "vite --host 0.0.0.0",
