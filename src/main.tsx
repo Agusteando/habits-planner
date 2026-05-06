@@ -80,7 +80,7 @@ function normalize(blocks:Block[]){return DAYS.flatMap(day=>dayBlocks(blocks,day
 function nextOrder(blocks:Block[],day:DayKey){const xs=blocks.filter(b=>b.day===day); return xs.length?Math.max(...xs.map(b=>b.order))+1:1;}
 function countdown(target?:string){if(!target)return""; const ms=new Date(target).getTime()-Date.now(); if(ms<=0)return"Ready"; const m=Math.ceil(ms/60000), h=Math.floor(m/60), min=m%60; if(h>=24)return`${Math.floor(h/24)}d ${h%24}h`; return h?`${h}h ${min}m`:`${min}m`;}
 function baseState(toast?:string, resetCount=0):State{const player=normalizePlayer({level:5,xp:1400,tokens:4,streakDays:12,streakState:"healthy",resetCount}); return{schemaVersion:28,activeView:"plan",tasks:tasksSeed,deletedTaskIds:[],blocks:[],player,week:{mode:"draft",daySeals:{}},selectedDay:"mon",weekStartIso:startOfWeekIso(),hidePastDays:false,planningView:"blocks",timeFilter:"both",theme:"dark",toast};}
-function loadState():State{try{let raw=localStorage.getItem(STORAGE_KEY); if(!raw){for(const key of LEGACY_STORAGE_KEYS){raw=localStorage.getItem(key); if(raw)break;}} if(!raw)return baseState(); const p=JSON.parse(raw); if(!p||typeof p!=="object")return baseState(); const deletedTaskIds=Array.isArray(p.deletedTaskIds)?p.deletedTaskIds.filter((id:any)=>typeof id==="string"):[]; const tasks={...tasksSeed,...(p.tasks||{})}; deletedTaskIds.forEach(id=>{if(tasks[id]&&!isSystemTask(tasks[id])) delete tasks[id];}); return {...baseState(),...p,schemaVersion:28,tasks,deletedTaskIds,blocks:normalize((p.blocks||[]).filter((b:Block)=>!!tasks[b.taskId])),player:normalizePlayer({...baseState().player,...(p.player||{}),resetCount:p.player?.resetCount||0}),week:{mode:p.week?.mode||"draft",sealedAt:p.week?.sealedAt,reviewOpenUntil:p.week?.reviewOpenUntil,emergencyReviewRequestedAt:p.week?.emergencyReviewRequestedAt,emergencyReviewUnlockAt:p.week?.emergencyReviewUnlockAt,daySeals:p.week?.daySeals||{}},weekStartIso:p.weekStartIso||startOfWeekIso(),hidePastDays:!!p.hidePastDays,planningView:p.planningView==="time"?"time":"blocks",timeFilter:p.timeFilter==="morning"||p.timeFilter==="afternoon"?p.timeFilter:"both",theme:p.theme==="light"?"light":"dark"};}catch{return baseState("Stored plan reset.");}}
+function loadState():State{try{let raw=localStorage.getItem(STORAGE_KEY); if(!raw){for(const key of LEGACY_STORAGE_KEYS){raw=localStorage.getItem(key); if(raw)break;}} if(!raw)return baseState(); const p=JSON.parse(raw); if(!p||typeof p!=="object")return baseState(); const deletedTaskIds:string[]=Array.isArray(p.deletedTaskIds)?p.deletedTaskIds.filter((id:any):id is string=>typeof id==="string"):[]; const tasks={...tasksSeed,...(p.tasks||{})}; deletedTaskIds.forEach(id=>{if(tasks[id]&&!isSystemTask(tasks[id])) delete tasks[id];}); return {...baseState(),...p,schemaVersion:28,tasks,deletedTaskIds,blocks:normalize((p.blocks||[]).filter((b:Block)=>!!tasks[b.taskId])),player:normalizePlayer({...baseState().player,...(p.player||{}),resetCount:p.player?.resetCount||0}),week:{mode:p.week?.mode||"draft",sealedAt:p.week?.sealedAt,reviewOpenUntil:p.week?.reviewOpenUntil,emergencyReviewRequestedAt:p.week?.emergencyReviewRequestedAt,emergencyReviewUnlockAt:p.week?.emergencyReviewUnlockAt,daySeals:p.week?.daySeals||{}},weekStartIso:p.weekStartIso||startOfWeekIso(),hidePastDays:!!p.hidePastDays,planningView:p.planningView==="time"?"time":"blocks",timeFilter:p.timeFilter==="morning"||p.timeFilter==="afternoon"?p.timeFilter:"both",theme:p.theme==="light"?"light":"dark"};}catch{return baseState("Stored plan reset.");}}
 function report(blocks:Block[],tasks:Record<string,Task>){let tension=0,relief=0,tokenDelta=0; for(const b of blocks){if(b.status==="missed"||b.status==="paused")continue; const t=tasks[b.taskId]; if(!t)continue; const tier=getTier(t,b.tier); tension+=tier.tension; relief+=tier.relief; tokenDelta+=t.tokenEarn-t.tokenCost;} const netTension=tension-relief; const status=netTension>=RED_ZONE?"redZone":netTension>=THIN_ICE?"thinIce":"balanced"; return{tension,relief,tokenDelta,netTension,status,sealDisabledReason: status==="redZone"?"Add relief before sealing.":tokenDelta<0?"Rewards exceed earned tokens.":undefined};}
 function canSeal(r:ReturnType<typeof report>, week:Week){return (week.mode==="draft"||week.mode==="reviewOpen")&&r.status!=="redZone"&&r.tokenDelta>=0;}
 function canEditGlobal(week:Week){return week.mode==="draft"|| (week.mode==="reviewOpen" && !!week.reviewOpenUntil && Date.now()<new Date(week.reviewOpenUntil).getTime());}
@@ -107,9 +107,11 @@ function makeBlock(t:Task,day:DayKey,order:number,reviewUnlockAt?:string,timeBan
 function insertBlock(blocks:Block[],incoming:Block,target:{day:DayKey;beforeBlockId?:string}){if(!target.beforeBlockId)return normalize([...blocks,{...incoming,day:target.day,order:nextOrder(blocks,target.day)}]); const rest=blocks.filter(b=>b.day!==target.day), xs=dayBlocks(blocks,target.day), out:Block[]=[]; let done=false; for(const b of xs){if(b.id===target.beforeBlockId){out.push({...incoming,day:target.day,order:b.order-.5}); done=true;} out.push(b);} if(!done)out.push({...incoming,day:target.day,order:nextOrder(blocks,target.day)}); return normalize([...rest,...out]);}
 function makeCustom(title:string,kind:Kind):Task{const clean=title.trim(); const idText=clean.toLowerCase().replace(/[^a-z0-9]+/g,"_").replace(/^_|_$/g,"").slice(0,38)||"custom"; const c={discipline:["Focus","cyan","✧",0,1,[4,16,34],[10,30,60],["Minimum version","Standard version","Deep version"]],reward:["Dopa","violet","✦",1,0,[0,0,0],[0,0,0],["Small reward","Standard reward","Long reward"]],recovery:["Recovery","amber","⬖",0,0,[0,2,4],[8,16,24],["Tiny reset","Reset","Full reset"]],review:["System","silver","◈",0,0,[0,0,0],[0,0,0],["15 min edit window","30 min review","45 min reset"]],pause:["System","silver","Ⅱ",0,0,[0,0,0],[0,0,0],["Pause remaining day","Protect evening","Full stop"]]}[kind] as [Category,Accent,string,number,number,number[],number[],string[]]; const relief=kind==="reward"?[14,28,44]:kind==="recovery"?[12,20,30]:kind==="review"?[8,10,12]:kind==="pause"?[20,30,40]:[0,0,0]; return{id:`custom_${idText}_${Date.now().toString(36)}`,title:clean,icon:c[2],kind,category:c[0],accent:c[1],tokenCost:c[3],tokenEarn:c[4],tiers:[1,2,3].map((l,i)=>({level:l as 1|2|3,label:c[7][i],minutes:kind==="pause"?0:[5,20,45][i],xp:c[6][i],tension:c[5][i],relief:relief[i]}))};}
 function downloadJson(name:string,data:unknown){const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"}); const url=URL.createObjectURL(blob); const a=document.createElement("a"); a.href=url; a.download=name; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);}
+function clearPlannerPersistence(){try{for(const key of Object.keys(localStorage)){if(key.startsWith("habit-planner-rpg-")&&key!==STORAGE_KEY)localStorage.removeItem(key);}}catch{}}
+function resetPlannerState(s:State):State{return{...s,activeView:"plan",blocks:[],player:normalizePlayer({level:1,xp:0,tokens:0,streakDays:0,streakState:"healthy",resetCount:s.player.resetCount+1}),week:{mode:"draft",daySeals:{}},selectedDay:"mon",weekStartIso:startOfWeekIso(),hidePastDays:false,planningView:"blocks",toast:"Full reset complete. Week cleared."};}
 function validateTask(x:any):Task{if(!x||typeof x!=="object")throw new Error("Invalid action."); if(!x.id||!x.title||!x.icon)throw new Error("Action needs id, title, and icon."); if(!["discipline","reward","recovery","review","pause"].includes(x.kind))throw new Error(`Invalid action kind: ${x.kind}`); if(!["Body","Food","Focus","Dopa","Recovery","System"].includes(x.category))throw new Error(`Invalid category: ${x.category}`); if(!Array.isArray(x.tiers)||x.tiers.length!==3)throw new Error(`${x.title} must have exactly 3 tiers.`); return x as Task;}
 function validateBank(x:any):BankFile{if(!x||x.kind!=="habit-action-bank"||!x.tasks)throw new Error("Not an action bank file."); const tasks:Record<string,Task>={}; Object.values(x.tasks).forEach((v:any)=>{const t=validateTask(v); tasks[t.id]=t;}); return{schemaVersion:28,kind:"habit-action-bank",exportedAt:new Date().toISOString(),tasks};}
-function validatePlan(x:any):PlanFile{if(!x||!x.tasks||!Array.isArray(x.blocks))throw new Error("Invalid plan file."); const deletedTaskIds=Array.isArray(x.deletedTaskIds)?x.deletedTaskIds.filter((id:any)=>typeof id==="string"):[]; const tasks={...tasksSeed,...x.tasks}; Object.values(tasks).forEach((v:any)=>validateTask(v)); deletedTaskIds.forEach(id=>{if(tasks[id]&&!isSystemTask(tasks[id])) delete tasks[id];}); return{...baseState(),...x,schemaVersion:28,tasks,deletedTaskIds,blocks:normalize(x.blocks.filter((b:Block)=>!!tasks[b.taskId])),player:normalizePlayer({...baseState().player,...x.player,resetCount:x.player?.resetCount||0}),week:{mode:x.week?.mode||"draft",sealedAt:x.week?.sealedAt,reviewOpenUntil:x.week?.reviewOpenUntil,emergencyReviewRequestedAt:x.week?.emergencyReviewRequestedAt,emergencyReviewUnlockAt:x.week?.emergencyReviewUnlockAt,daySeals:x.week?.daySeals||{}},weekStartIso:x.weekStartIso||startOfWeekIso(),hidePastDays:!!x.hidePastDays,planningView:x.planningView==="time"?"time":"blocks",timeFilter:x.timeFilter==="morning"||x.timeFilter==="afternoon"?x.timeFilter:"both",theme:x.theme==="light"?"light":"dark",exportedAt:new Date().toISOString()};}
+function validatePlan(x:any):PlanFile{if(!x||!x.tasks||!Array.isArray(x.blocks))throw new Error("Invalid plan file."); const deletedTaskIds:string[]=Array.isArray(x.deletedTaskIds)?x.deletedTaskIds.filter((id:any):id is string=>typeof id==="string"):[]; const tasks={...tasksSeed,...x.tasks}; Object.values(tasks).forEach((v:any)=>validateTask(v)); deletedTaskIds.forEach(id=>{if(tasks[id]&&!isSystemTask(tasks[id])) delete tasks[id];}); return{...baseState(),...x,schemaVersion:28,tasks,deletedTaskIds,blocks:normalize(x.blocks.filter((b:Block)=>!!tasks[b.taskId])),player:normalizePlayer({...baseState().player,...x.player,resetCount:x.player?.resetCount||0}),week:{mode:x.week?.mode||"draft",sealedAt:x.week?.sealedAt,reviewOpenUntil:x.week?.reviewOpenUntil,emergencyReviewRequestedAt:x.week?.emergencyReviewRequestedAt,emergencyReviewUnlockAt:x.week?.emergencyReviewUnlockAt,daySeals:x.week?.daySeals||{}},weekStartIso:x.weekStartIso||startOfWeekIso(),hidePastDays:!!x.hidePastDays,planningView:x.planningView==="time"?"time":"blocks",timeFilter:x.timeFilter==="morning"||x.timeFilter==="afternoon"?x.timeFilter:"both",theme:x.theme==="light"?"light":"dark",exportedAt:new Date().toISOString()};}
 
 type DropTarget = {day:DayKey;beforeBlockId?:string;timeBand?:TimeBand;timeStart?:number};
 type Drag = {type:"task";taskId:string;x:number;y:number}|{type:"block";blockId:string;x:number;y:number};
@@ -138,7 +140,7 @@ function App(){
       const rect=el.getBoundingClientRect(); 
       const x=rect.left+Math.min(56,Math.max(28,rect.width*.24));
       const y=rect.top+rect.height*.5;
-      const burst={id:uid("burst"),x,y,mode:levelUp?"level":mode}; 
+      const burst:ParticleBurst={id:uid("burst"),x,y,mode:levelUp?"level":mode}; 
       setBursts(xs=>[...xs,burst]); 
       window.setTimeout(()=>setBursts(xs=>xs.filter(item=>item.id!==burst.id)),1100); 
       if(xp>0){const float={id:uid("xp"),x:x+10,y:y-10,xp,levelUp}; setXpFloats(xs=>[...xs,float]); window.setTimeout(()=>setXpFloats(xs=>xs.filter(item=>item.id!==float.id)),1500);} 
@@ -228,7 +230,7 @@ function App(){
   function exportBank(){downloadJson(`habit-action-bank-${new Date().toISOString().slice(0,10)}.json`,{schemaVersion:28,kind:"habit-action-bank",exportedAt:new Date().toISOString(),tasks:state.tasks}); setState(s=>({...s,toast:"Action bank exported."}));}
   function exportTemplate(){downloadJson("habit-action-bank-template.json",{schemaVersion:28,kind:"habit-action-bank",exportedAt:new Date().toISOString(),tasks:{example_custom_action:makeCustom("Example Custom Action","discipline")}}); setState(s=>({...s,toast:"Template downloaded."}));}
   function starter(){if(state.blocks.length){setState(s=>({...s,toast:"Starter only works on a blank week."})); return;} const starter:[DayKey,string][]=[["mon","pushups"],["mon","tuna"],["mon","walk"],["tue","focus"],["tue","game"],["wed","pushups"],["wed","tuna"],["thu","focus"],["thu","pause"],["fri","walk"],["fri","pizza"],["sun","review"]]; let blocks:Block[]=[]; for(const [d,id] of starter){const task=state.tasks[id]; if(task) blocks.push(makeBlock(task,d,nextOrder(blocks,d)));} setState(s=>({...s,blocks:normalize(blocks),toast:blocks.length?"Starter week added.":"Starter actions were removed from the bank."}));}
-  function fullWipe(){if(!window.confirm("Full reset wipes level, XP, tokens, streak, completion state, and seals. Continue?"))return; setState(s=>({...s,blocks:s.blocks.map(b=>({...b,status:"planned",sealed:false,reviewOpenedAt:undefined,pauseAppliedAt:undefined})),player:normalizePlayer({level:1,xp:0,tokens:0,streakDays:0,streakState:"healthy",resetCount:s.player.resetCount+1}),week:{mode:"draft",daySeals:{}},theme:s.theme,toast:"Full reset complete. Progress lost; plan unsealed."}));}
+  function fullWipe(){clearPlannerPersistence(); setDrag(null); setExpanded(null); setPopover(null); setState(s=>{const next=resetPlannerState(s); try{localStorage.setItem(STORAGE_KEY,JSON.stringify({...next,toast:undefined}));}catch{} return next;});}
   function removeBankAction(taskId:string){setState(s=>{const task=s.tasks[taskId]; if(!task)return s; if(isSystemTask(task))return{...s,toast:"System actions cannot be deleted."}; const nextTasks={...s.tasks}; delete nextTasks[taskId]; const removedBlocks=s.blocks.filter(b=>b.taskId===taskId).length; const nextBlocks=normalize(s.blocks.filter(b=>b.taskId!==taskId)); const deletedTaskIds=Array.from(new Set([...(s.deletedTaskIds||[]),taskId])); return {...s,tasks:nextTasks,deletedTaskIds,blocks:nextBlocks,toast:removedBlocks?`Deleted ${task.title} and ${removedBlocks} planned block${removedBlocks===1?"":"s"}.`:`Deleted ${task.title}.`};});}
   function toggleTheme(){setState(s=>({...s,theme:s.theme==="dark"?"light":"dark",toast:s.theme==="dark"?"Light theme":"Dark theme"}));}
 
@@ -330,6 +332,88 @@ function App(){
   </main>;
 }
 function Today({state,blockAction}:{state:State;blockAction:(id:string,a:"tier"|"done"|"missed"|"remove"|"pause"|"review")=>void}){const blocks=dayBlocks(state.blocks,state.selectedDay); const current=blocks.find(b=>b.status==="planned"||b.status==="recoveryDue"); return <section className="today-panel glass-panel"><div className="today-head"><div className="today-ring"><span>{blocks.length?Math.round(blocks.filter(b=>b.status==="done"||b.status==="paused").length/blocks.length*100):0}%</span></div><div><h1>Today</h1><p>Assumed complete unless you report otherwise.</p></div></div>{current&&state.tasks[current.taskId]?<article className="today-current"><strong>{state.tasks[current.taskId].title}</strong><button onClick={()=>blockAction(current.id,"done")}>Done</button><button onClick={()=>blockAction(current.id,"missed")}>Missed</button></article>:<div className="quiet-empty">No active exception.</div>}<div className="today-queue">{blocks.map(b=>{const t=state.tasks[b.taskId]; return t?<div className={`queue-line ${b.status}`} key={b.id}><span>{t.icon}</span><strong>{t.title}</strong><small>{b.status}</small></div>:null;})}</div></section>}
-function Vault({state,exportPlan,fullWipe}:{state:State;exportPlan:()=>void;fullWipe:()=>void}){const progress=rsProgress(state.player.xp); return <section className="vault-panel glass-panel"><div className="vault-hero"><span>✦</span><h1>Vault</h1><p>Rewards, progression, escape hatches, and protected system rules.</p><div className="vault-stats"><strong>Level {progress.level}</strong><strong>{compactNumber(progress.xp)} XP</strong><strong>{state.player.tokens} tokens</strong><strong>{state.player.resetCount} resets</strong></div><div className="vault-xp-track"><i style={{width:`${progress.progress*100}%`}}/><small>{progress.level>=RS_MAX_LEVEL?"Maximum level reached":`${compactNumber(progress.remaining)} XP to level ${progress.level+1}`}</small></div></div><div className="vault-grid"><article className="vault-card level-card"><div><small>RuneScape-style progression</small><strong>Level {progress.level} / {RS_MAX_LEVEL}</strong><p>XP uses the classic exponential level curve. Level 99 requires {compactNumber(RS_XP_CAP)} total XP.</p></div></article><article className="reset-card"><div><small>Costly escape hatch</small><strong>Full reset</strong><p>Wipes level, XP, tokens, streak, completion state, and seals. Planned blocks and the Action Bank remain. Reset count is preserved.</p></div><button className="danger-reset" onClick={fullWipe}>Reset progress</button></article><article className="vault-card"><div><small>Portable state</small><strong>Plan export</strong><p>Download the current plan and bank state as JSON for backup or migration.</p></div><button onClick={exportPlan}>Export plan</button></article></div><div className="vault-list"><article><span>◈</span><div><strong>Review-gated editing</strong><small>Sealed plans unlock through a Review block, not casual editing.</small></div></article><article><span>Ⅱ</span><div><strong>Protected system blocks</strong><small>Review, Pause, and Recovery blocks are part of the safety system.</small></div></article><article><span>×</span><div><strong>Bank deletion is permanent</strong><small>Hover a removable Action Bank block and press ×. The action and its planned blocks are removed and stay removed.</small></div></article></div></section>}
+function Vault({state,exportPlan,fullWipe}:{state:State;exportPlan:()=>void;fullWipe:()=>void}){
+  const [confirming,setConfirming]=useState(false);
+  const progress=rsProgress(state.player.xp);
+  const rewardTasks=Object.values(state.tasks).filter(t=>t.kind==="reward");
+  const sealedDays=DAYS.filter(day=>isDaySealed(state,day)).length;
+  const completedBlocks=state.blocks.filter(b=>b.status==="done").length;
+  const planStatus=state.blocks.length?`${state.blocks.length} planned block${state.blocks.length===1?"":"s"}`:"Empty draft week";
+  const weekState=state.week.mode==="reviewOpen"?"Review open":state.week.mode==="reviewPending"?"Review pending":state.week.mode==="sealed"?"Week sealed":sealedDays?`${sealedDays} sealed day${sealedDays===1?"":"s"}`:"Draft";
+  const confirmReset=()=>{setConfirming(false); fullWipe();};
+  return <section className="vault-panel glass-panel">
+    <div className="vault-shell">
+      <header className="vault-hero">
+        <div className="vault-hero-copy">
+          <span className="vault-mark">✦</span>
+          <div>
+            <h1>Vault</h1>
+            <p>Rewards, progression, escape hatches, and protected system rules.</p>
+          </div>
+        </div>
+        <div className="vault-xp-block">
+          <div className="vault-level-line"><strong>Level {progress.level}</strong><span>{compactNumber(progress.xp)} XP</span></div>
+          <div className="vault-xp-track"><i style={{width:`${progress.progress*100}%`}}/><small>{progress.level>=RS_MAX_LEVEL?"Maximum level reached":`${compactNumber(progress.remaining)} XP to level ${progress.level+1}`}</small></div>
+        </div>
+      </header>
+
+      <div className="vault-content-grid">
+        <section className="vault-section vault-progression" aria-label="Progression">
+          <div className="vault-section-head"><small>Progression</small><strong>Character state</strong></div>
+          <div className="vault-stat-grid">
+            <div><span>Level</span><strong>{progress.level} / {RS_MAX_LEVEL}</strong></div>
+            <div><span>XP</span><strong>{compactNumber(progress.xp)}</strong></div>
+            <div><span>Tokens</span><strong>{state.player.tokens}</strong></div>
+            <div><span>Streak</span><strong>{state.player.streakDays}</strong></div>
+          </div>
+          <p>XP uses the classic exponential level curve. Level 99 requires {compactNumber(RS_XP_CAP)} total XP.</p>
+        </section>
+
+        <section className="vault-section vault-rewards" aria-label="Rewards">
+          <div className="vault-section-head"><small>Rewards</small><strong>Token spend</strong></div>
+          <div className="reward-ledger">
+            {rewardTasks.map(t=><article key={t.id}><span>{t.icon}</span><div><strong>{t.title}</strong><small>{t.tokenCost} token{t.tokenCost===1?"":"s"} · {getTier(t,2).label}</small></div></article>)}
+            {!rewardTasks.length&&<div className="vault-empty">No reward actions in the bank.</div>}
+          </div>
+        </section>
+
+        <section className="vault-section vault-plan-state" aria-label="Current plan state">
+          <div className="vault-section-head"><small>Current plan</small><strong>{weekState}</strong></div>
+          <div className="vault-state-list">
+            <div><span>Blocks</span><strong>{planStatus}</strong></div>
+            <div><span>Completed</span><strong>{completedBlocks}</strong></div>
+            <div><span>Review gate</span><strong>{state.week.mode==="reviewPending"?"Armed":state.week.mode==="reviewOpen"?"Open":"Closed"}</strong></div>
+            <div><span>Resets</span><strong>{state.player.resetCount}</strong></div>
+          </div>
+        </section>
+
+        <section className={`vault-section vault-reset ${confirming?"confirming":""}`} aria-label="Full reset">
+          <div className="vault-section-head"><small>Costly escape hatch</small><strong>Full reset</strong></div>
+          <p>Wipes level, XP, tokens, streak, completion state, sealed/review state, and every planned block in the current plan. The Action Bank remains. Reset count is preserved.</p>
+          {!confirming?<button className="danger-reset" onClick={()=>setConfirming(true)}>Reset progress</button>:<div className="reset-confirm">
+            <strong>Clear the current plan and progression?</strong>
+            <small>This cannot be undone from the app.</small>
+            <div><button className="danger-reset" onClick={confirmReset}>Confirm full reset</button><button className="quiet-reset" onClick={()=>setConfirming(false)}>Cancel</button></div>
+          </div>}
+        </section>
+
+        <section className="vault-section vault-export" aria-label="Plan export">
+          <div className="vault-section-head"><small>Portable state</small><strong>Plan export</strong></div>
+          <p>Download the current plan and bank state as JSON for backup or migration.</p>
+          <button onClick={exportPlan}>Export plan</button>
+        </section>
+
+        <section className="vault-section vault-system" aria-label="System rules">
+          <div className="vault-section-head"><small>System</small><strong>Protected rules</strong></div>
+          <div className="vault-rule-list">
+            <article><span>◈</span><div><strong>Review-gated editing</strong><small>Sealed plans unlock through a Review block, not casual editing.</small></div></article>
+            <article><span>Ⅱ</span><div><strong>Protected system blocks</strong><small>Review, Pause, and Recovery blocks are part of the safety system.</small></div></article>
+            <article><span>×</span><div><strong>Bank deletion is permanent</strong><small>Hover a removable Action Bank block and press ×. The action and its planned blocks are removed and stay removed.</small></div></article>
+          </div>
+        </section>
+      </div>
+    </div>
+  </section>;
+}
 class ErrorBoundary extends React.Component<{children:React.ReactNode},{error?:Error}>{state:{error?:Error}={}; static getDerivedStateFromError(error:Error){return{error};} render(){if(this.state.error)return <main className="fallback-screen"><section className="fallback-card"><h1>Planner could not start.</h1><p>{this.state.error.message}</p><button onClick={()=>{for(const k of Object.keys(localStorage))if(k.startsWith("habit-planner-rpg"))localStorage.removeItem(k); location.reload();}}>Reset local plan</button></section></main>; return this.props.children;}}
 ReactDOM.createRoot(document.getElementById("root")!).render(<React.StrictMode><ErrorBoundary><App/></ErrorBoundary></React.StrictMode>);
