@@ -11,7 +11,7 @@ class ErrorBoundary extends Component<{ children: ReactNode }, { error: Error | 
   componentDidCatch(error: Error, info: ErrorInfo) { console.error(error, info); }
   render() {
     if (!this.state.error) return this.props.children;
-    return <main className="crash"><h1>Planner could not start.</h1><p>{this.state.error.message}</p><button onClick={() => { localStorage.removeItem("habit-planner-rpg-v4"); location.reload(); }}>Reset local plan</button></main>;
+    return <main className="crash"><h1>Planner could not start.</h1><p>{this.state.error.message}</p><button onClick={() => { localStorage.removeItem("habit-planner-rpg-v5"); location.reload(); }}>Reset local plan</button></main>;
   }
 }
 

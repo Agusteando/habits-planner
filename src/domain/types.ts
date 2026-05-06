@@ -12,4 +12,4 @@ export interface ScheduledBlock { id: string; taskId: string; day: DayKey; order
 export interface PlayerState { level: number; xp: number; tokens: number; streakDays: number; streakState: StreakState; }
 export interface WeekState { mode: WeekMode; sealCompletedAt?: string; reviewRequestedAt?: string; reviewUnlocksAt?: string; sosUntil?: string; }
 export interface EquilibriumReport { tension: number; relief: number; netTension: number; plannedTokenDelta: number; status: "balanced" | "thinIce" | "redZone"; sealDisabledReason?: string; }
-export interface PlannerSnapshot { schemaVersion: 4; exportedAt: string; tasks: Record<string, HabitTask>; blocks: ScheduledBlock[]; player: PlayerState; week: WeekState; selectedDay: DayKey; planningLens: PlanningLens; }
+export interface PlannerSnapshot { schemaVersion: 5; exportedAt: string; tasks: Record<string, HabitTask>; blocks: ScheduledBlock[]; player: PlayerState; week: WeekState; selectedDay: DayKey; planningLens: PlanningLens; }

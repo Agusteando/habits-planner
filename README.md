@@ -1,13 +1,19 @@
-# Habit Planner RPG v4
+# Habit Planner RPG v5
 
-Stable responsive build focused on avoiding blank-screen failures and improving scaling.
+This pass focuses on the core UX problem: the main planning surface now opens as an empty canvas and scales without squeezing the calendar blocks.
 
-What changed from the previous package:
-- Removed dnd-kit, Framer Motion, Zustand, and icon-package runtime dependencies.
-- Replaced them with a custom pointer drag layer built with React and DOM hit testing.
-- Kept mobile + desktop drag/drop, day-first calendar, optional time lens, autosave, import, export, seal, SOS, tokens, recovery, and equilibrium rules.
-- Added an Error Boundary so runtime failures show a recoverable screen instead of a blank page.
-- Rebuilt scaling with fluid CSS, wider desktop activation, internal scrolling, and readable column minimums.
+Key changes:
+
+- The app opens on Plan, not Today.
+- No scheduled blocks are seeded by default. The user starts from an empty week.
+- A visible `Use starter week` button exists for users who want a populated demo plan.
+- Desktop planning uses an adaptive wrapping calendar canvas instead of forcing seven narrow columns at standard resolutions.
+- Wide screens can still show seven days when there is enough width.
+- Block controls in the calendar use readable text buttons: `Tier`, `Done`, `Skip`, and `Remove`.
+- Action Bank is explicitly labeled and explains the first action: drag one block into a day.
+- Empty days explain where to drop actions.
+- The storage key is `habit-planner-rpg-v5`, so older seeded local state is not automatically loaded.
+- Import/export remains real JSON behavior.
 
 Run:
 
@@ -16,5 +22,8 @@ npm install
 npm run dev
 ```
 
-Storage key: `habit-planner-rpg-v4`
-Export schema: `4`
+Production build was verified with:
+
+```bash
+npm run build
+```
