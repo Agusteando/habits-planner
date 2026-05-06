@@ -1,11 +1,13 @@
 
-# Habit Planner RPG v26
+# Habit Planner RPG v27
 
 Updates in this pass:
 
-- Block popovers now open as true overlays to the right of the clicked block instead of being constrained inside the Kanban column.
-- Popovers now render outside the column flow with a more comfortable size for scanning and action-taking.
-- Added viewport-aware placement with a strong right-side preference.
-- Popovers close on outside click, Escape, resize, or scroll.
-- On small screens, popovers fall back to a bottom-sheet style overlay.
+- Removed the direct “Add” button from Action Bank cards.
+- Rebuilt Time view as a true calendar-style surface instead of a stacked time-band Kanban.
+- Time view now uses continuous vertical time lanes from 5 AM to 9 PM.
+- Dropping into Time view places an action at the precise snapped time position.
+- Each time event can be resized vertically from its bottom handle; duration is estimated and persisted in minutes.
+- The current-time beam is constrained inside the current day lane and inside the active event when it intersects one.
+- Time events are contained in their day lanes to prevent leaking across the layout.
 - No package-lock.json is included.
