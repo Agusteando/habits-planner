@@ -838,3 +838,20 @@
   .slot-beam.axis-beam.no-target .beam-aura{width:34px}
   .slot-beam.axis-beam.no-target .beam-sparks{left:18px}
 }
+
+/* v25 row beam + quick add */
+.time-week-grid{position:relative}
+.time-row-beam{position:relative;align-self:center;height:0;pointer-events:none;z-index:7;overflow:visible}
+.time-row-beam .beam-core{position:absolute;left:0;right:0;top:0;height:2px;border-radius:999px;background:linear-gradient(90deg, rgba(103,232,249,.22), rgba(103,232,249,.95) 42%, rgba(255,255,255,.98) 100%);box-shadow:0 0 20px rgba(103,232,249,.6),0 0 34px rgba(103,232,249,.22)}
+.time-row-beam .beam-aura{position:absolute;left:-3px;right:-3px;top:-4px;height:10px;border-radius:999px;background:linear-gradient(90deg, rgba(103,232,249,0), rgba(103,232,249,.26), rgba(103,232,249,.1));filter:blur(3px);opacity:.95}
+.time-row-beam .beam-sparks{position:absolute;right:-2px;top:-12px;width:28px;height:26px;background:radial-gradient(circle at 18% 58%, rgba(255,255,255,.98) 0 1px, transparent 2px),radial-gradient(circle at 34% 28%, rgba(103,232,249,.96) 0 1.1px, transparent 2px),radial-gradient(circle at 52% 70%, rgba(255,255,255,.94) 0 1.1px, transparent 2px),radial-gradient(circle at 66% 40%, rgba(255,209,102,.95) 0 1.1px, transparent 2px),radial-gradient(circle at 82% 62%, rgba(103,232,249,.9) 0 1.2px, transparent 2px);filter:drop-shadow(0 0 6px rgba(255,255,255,.45));animation:cuttingSparks 1s linear infinite}
+.time-row-beam span{position:absolute;left:0;top:-20px;padding:3px 7px;border-radius:999px;background:rgba(6,11,20,.86);border:1px solid rgba(103,232,249,.26);color:var(--cyan);font-size:10px;font-weight:900;letter-spacing:.06em}
+.time-row-beam.no-target .beam-core{background:linear-gradient(90deg, rgba(103,232,249,.22), rgba(103,232,249,.95) 65%, rgba(255,255,255,.85) 100%)}
+.time-row-beam.no-target .beam-aura{background:linear-gradient(90deg, rgba(103,232,249,.04), rgba(103,232,249,.28), rgba(103,232,249,.06))}
+.time-kanban-cell.beam-row{box-shadow:inset 0 0 0 1px rgba(103,232,249,.06)}
+.time-drop.beam-target{border-color:rgba(103,232,249,.22);color:rgba(103,232,249,.66);background:linear-gradient(135deg, rgba(103,232,249,.06), rgba(255,255,255,.02));box-shadow:inset 0 0 0 1px rgba(103,232,249,.05)}
+.bank-card{position:relative;gap:10px}
+.bank-quick-add{margin-left:auto;flex:0 0 auto;height:32px;padding:0 10px;border-radius:11px;border:1px solid rgba(103,232,249,.18);background:rgba(103,232,249,.08);color:var(--cyan);font-size:12px;font-weight:800}
+.bank-quick-add:hover{background:rgba(103,232,249,.14)}
+@media (max-width:680px){.bank-quick-add{height:30px;padding:0 8px;font-size:11px}.time-row-beam span{left:6px}}
+:root[data-theme="light"] .time-row-beam span{background:rgba(255,255,255,.96)}
