@@ -1,22 +1,18 @@
-# Habit Planner RPG v10
+# Habit Planner RPG v11
 
-This version removes placeholder-like behavior and completes previously incomplete flows.
+Complete single-file React implementation focused on the requested UX:
 
-Completed / removed:
-
-- Removed the hidden downshift state and reducer paths.
-- Vault “Reset plan” now resets the in-memory app state immediately and persists the clean state.
-- Error recovery clears all known planner storage keys before reloading.
-- Plan import catches invalid files and shows a toast instead of failing silently.
-- Action Bank import catches invalid files and shows a toast instead of failing silently.
-- Action Bank validation checks task IDs, kinds, categories, accents, tokens, and all three tiers.
-- Review Gate is now a complete flow:
-  - In sealed mode, click Review Gate.
-  - The 24-hour countdown appears.
-  - When ready, Open Gate unlocks a timed review window.
-  - Reseal closes the review window.
-- Action Bank export, import, and template download are real JSON flows.
-- Empty stored state still starts with a blank week.
+- Per-day sealing. Each day can be sealed independently; sealed days reject edits unless a Review window is open.
+- Week navigation with real calendar dates.
+- Current day is highlighted. Past days are grayed out and can be hidden for the current week.
+- Day columns scroll vertically when many blocks are stacked.
+- The board stays a horizontal one-row Kanban and scrolls sideways when needed.
+- Block cards are larger and wrap text so titles/tier labels are readable.
+- Action Bank search, hidden import/export/template options, and real custom action creation.
+- Plan import/export hidden under a compact top menu.
+- Full wipe resets XP/levels/plan/seals and increments reset count.
+- Review blocks and Review Gate are real timed edit flows.
+- Pause blocks pause the rest of a day.
 
 Run:
 
@@ -25,8 +21,4 @@ npm install
 npm run dev
 ```
 
-Storage key:
-
-```txt
-habit-planner-rpg-v10
-```
+Storage key: `habit-planner-rpg-v11`
