@@ -20,7 +20,8 @@ type DaySeal = { sealedAt: string };
 type Player = { level: number; xp: number; tokens: number; streakDays: number; streakState: "healthy" | "fractured"; resetCount: number };
 type Week = { mode: Mode; sealedAt?: string; reviewOpenUntil?: string; emergencyReviewRequestedAt?: string; emergencyReviewUnlockAt?: string; daySeals: Partial<Record<DayKey, DaySeal>> };
 type Theme = "dark" | "light";
-type State = { schemaVersion: 28; activeView: "plan" | "today" | "vault"; tasks: Record<string, Task>; deletedTaskIds: string[]; blocks: Block[]; player: Player; week: Week; selectedDay: DayKey; weekStartIso: string; hidePastDays: boolean; planningView: PlanningView; timeFilter: TimeFilter; theme: Theme; toast?: string };
+type AppView = "plan" | "today";
+type State = { schemaVersion: 28; activeView: AppView; tasks: Record<string, Task>; deletedTaskIds: string[]; blocks: Block[]; player: Player; week: Week; selectedDay: DayKey; weekStartIso: string; hidePastDays: boolean; planningView: PlanningView; timeFilter: TimeFilter; theme: Theme; toast?: string };
 type BankFile = { schemaVersion: number; kind: "habit-action-bank"; exportedAt: string; tasks: Record<string, Task> };
 type PlanFile = State & { exportedAt: string };
 type ParticleBurst = { id: string; x: number; y: number; mode: "done" | "auto" | "level" };
@@ -80,7 +81,7 @@ function normalize(blocks:Block[]){return DAYS.flatMap(day=>dayBlocks(blocks,day
 function nextOrder(blocks:Block[],day:DayKey){const xs=blocks.filter(b=>b.day===day); return xs.length?Math.max(...xs.map(b=>b.order))+1:1;}
 function countdown(target?:string){if(!target)return""; const ms=new Date(target).getTime()-Date.now(); if(ms<=0)return"Ready"; const m=Math.ceil(ms/60000), h=Math.floor(m/60), min=m%60; if(h>=24)return`${Math.floor(h/24)}d ${h%24}h`; return h?`${h}h ${min}m`:`${min}m`;}
 function baseState(toast?:string, resetCount=0):State{const player=normalizePlayer({level:5,xp:1400,tokens:4,streakDays:12,streakState:"healthy",resetCount}); return{schemaVersion:28,activeView:"plan",tasks:tasksSeed,deletedTaskIds:[],blocks:[],player,week:{mode:"draft",daySeals:{}},selectedDay:"mon",weekStartIso:startOfWeekIso(),hidePastDays:false,planningView:"blocks",timeFilter:"both",theme:"dark",toast};}
-function loadState():State{try{let raw=localStorage.getItem(STORAGE_KEY); if(!raw){for(const key of LEGACY_STORAGE_KEYS){raw=localStorage.getItem(key); if(raw)break;}} if(!raw)return baseState(); const p=JSON.parse(raw); if(!p||typeof p!=="object")return baseState(); const deletedTaskIds:string[]=Array.isArray(p.deletedTaskIds)?p.deletedTaskIds.filter((id:any):id is string=>typeof id==="string"):[]; const tasks={...tasksSeed,...(p.tasks||{})}; deletedTaskIds.forEach(id=>{if(tasks[id]&&!isSystemTask(tasks[id])) delete tasks[id];}); return {...baseState(),...p,schemaVersion:28,tasks,deletedTaskIds,blocks:normalize((p.blocks||[]).filter((b:Block)=>!!tasks[b.taskId])),player:normalizePlayer({...baseState().player,...(p.player||{}),resetCount:p.player?.resetCount||0}),week:{mode:p.week?.mode||"draft",sealedAt:p.week?.sealedAt,reviewOpenUntil:p.week?.reviewOpenUntil,emergencyReviewRequestedAt:p.week?.emergencyReviewRequestedAt,emergencyReviewUnlockAt:p.week?.emergencyReviewUnlockAt,daySeals:p.week?.daySeals||{}},weekStartIso:p.weekStartIso||startOfWeekIso(),hidePastDays:!!p.hidePastDays,planningView:p.planningView==="time"?"time":"blocks",timeFilter:p.timeFilter==="morning"||p.timeFilter==="afternoon"?p.timeFilter:"both",theme:p.theme==="light"?"light":"dark"};}catch{return baseState("Stored plan reset.");}}
+function loadState():State{try{let raw=localStorage.getItem(STORAGE_KEY); if(!raw){for(const key of LEGACY_STORAGE_KEYS){raw=localStorage.getItem(key); if(raw)break;}} if(!raw)return baseState(); const p=JSON.parse(raw); if(!p||typeof p!=="object")return baseState(); const deletedTaskIds:string[]=Array.isArray(p.deletedTaskIds)?p.deletedTaskIds.filter((id:any):id is string=>typeof id==="string"):[]; const tasks={...tasksSeed,...(p.tasks||{})}; deletedTaskIds.forEach(id=>{if(tasks[id]&&!isSystemTask(tasks[id])) delete tasks[id];}); return {...baseState(),...p,schemaVersion:28,activeView:p.activeView==="today"?"today":"plan",tasks,deletedTaskIds,blocks:normalize((p.blocks||[]).filter((b:Block)=>!!tasks[b.taskId])),player:normalizePlayer({...baseState().player,...(p.player||{}),resetCount:p.player?.resetCount||0}),week:{mode:p.week?.mode||"draft",sealedAt:p.week?.sealedAt,reviewOpenUntil:p.week?.reviewOpenUntil,emergencyReviewRequestedAt:p.week?.emergencyReviewRequestedAt,emergencyReviewUnlockAt:p.week?.emergencyReviewUnlockAt,daySeals:p.week?.daySeals||{}},weekStartIso:p.weekStartIso||startOfWeekIso(),hidePastDays:!!p.hidePastDays,planningView:p.planningView==="time"?"time":"blocks",timeFilter:p.timeFilter==="morning"||p.timeFilter==="afternoon"?p.timeFilter:"both",theme:p.theme==="light"?"light":"dark"};}catch{return baseState("Stored plan reset.");}}
 function report(blocks:Block[],tasks:Record<string,Task>){let tension=0,relief=0,tokenDelta=0; for(const b of blocks){if(b.status==="missed"||b.status==="paused")continue; const t=tasks[b.taskId]; if(!t)continue; const tier=getTier(t,b.tier); tension+=tier.tension; relief+=tier.relief; tokenDelta+=t.tokenEarn-t.tokenCost;} const netTension=tension-relief; const status=netTension>=RED_ZONE?"redZone":netTension>=THIN_ICE?"thinIce":"balanced"; return{tension,relief,tokenDelta,netTension,status,sealDisabledReason: status==="redZone"?"Add relief before sealing.":tokenDelta<0?"Rewards exceed earned tokens.":undefined};}
 function canSeal(r:ReturnType<typeof report>, week:Week){return (week.mode==="draft"||week.mode==="reviewOpen")&&r.status!=="redZone"&&r.tokenDelta>=0;}
 function canEditGlobal(week:Week){return week.mode==="draft"|| (week.mode==="reviewOpen" && !!week.reviewOpenUntil && Date.now()<new Date(week.reviewOpenUntil).getTime());}
@@ -111,14 +112,14 @@ function clearPlannerPersistence(){try{for(const key of Object.keys(localStorage
 function resetPlannerState(s:State):State{return{...s,activeView:"plan",blocks:[],player:normalizePlayer({level:1,xp:0,tokens:0,streakDays:0,streakState:"healthy",resetCount:s.player.resetCount+1}),week:{mode:"draft",daySeals:{}},selectedDay:"mon",weekStartIso:startOfWeekIso(),hidePastDays:false,planningView:"blocks",toast:"Full reset complete. Week cleared."};}
 function validateTask(x:any):Task{if(!x||typeof x!=="object")throw new Error("Invalid action."); if(!x.id||!x.title||!x.icon)throw new Error("Action needs id, title, and icon."); if(!["discipline","reward","recovery","review","pause"].includes(x.kind))throw new Error(`Invalid action kind: ${x.kind}`); if(!["Body","Food","Focus","Dopa","Recovery","System"].includes(x.category))throw new Error(`Invalid category: ${x.category}`); if(!Array.isArray(x.tiers)||x.tiers.length!==3)throw new Error(`${x.title} must have exactly 3 tiers.`); return x as Task;}
 function validateBank(x:any):BankFile{if(!x||x.kind!=="habit-action-bank"||!x.tasks)throw new Error("Not an action bank file."); const tasks:Record<string,Task>={}; Object.values(x.tasks).forEach((v:any)=>{const t=validateTask(v); tasks[t.id]=t;}); return{schemaVersion:28,kind:"habit-action-bank",exportedAt:new Date().toISOString(),tasks};}
-function validatePlan(x:any):PlanFile{if(!x||!x.tasks||!Array.isArray(x.blocks))throw new Error("Invalid plan file."); const deletedTaskIds:string[]=Array.isArray(x.deletedTaskIds)?x.deletedTaskIds.filter((id:any):id is string=>typeof id==="string"):[]; const tasks={...tasksSeed,...x.tasks}; Object.values(tasks).forEach((v:any)=>validateTask(v)); deletedTaskIds.forEach(id=>{if(tasks[id]&&!isSystemTask(tasks[id])) delete tasks[id];}); return{...baseState(),...x,schemaVersion:28,tasks,deletedTaskIds,blocks:normalize(x.blocks.filter((b:Block)=>!!tasks[b.taskId])),player:normalizePlayer({...baseState().player,...x.player,resetCount:x.player?.resetCount||0}),week:{mode:x.week?.mode||"draft",sealedAt:x.week?.sealedAt,reviewOpenUntil:x.week?.reviewOpenUntil,emergencyReviewRequestedAt:x.week?.emergencyReviewRequestedAt,emergencyReviewUnlockAt:x.week?.emergencyReviewUnlockAt,daySeals:x.week?.daySeals||{}},weekStartIso:x.weekStartIso||startOfWeekIso(),hidePastDays:!!x.hidePastDays,planningView:x.planningView==="time"?"time":"blocks",timeFilter:x.timeFilter==="morning"||x.timeFilter==="afternoon"?x.timeFilter:"both",theme:x.theme==="light"?"light":"dark",exportedAt:new Date().toISOString()};}
+function validatePlan(x:any):PlanFile{if(!x||!x.tasks||!Array.isArray(x.blocks))throw new Error("Invalid plan file."); const deletedTaskIds:string[]=Array.isArray(x.deletedTaskIds)?x.deletedTaskIds.filter((id:any):id is string=>typeof id==="string"):[]; const tasks={...tasksSeed,...x.tasks}; Object.values(tasks).forEach((v:any)=>validateTask(v)); deletedTaskIds.forEach(id=>{if(tasks[id]&&!isSystemTask(tasks[id])) delete tasks[id];}); return{...baseState(),...x,schemaVersion:28,activeView:x.activeView==="today"?"today":"plan",tasks,deletedTaskIds,blocks:normalize(x.blocks.filter((b:Block)=>!!tasks[b.taskId])),player:normalizePlayer({...baseState().player,...x.player,resetCount:x.player?.resetCount||0}),week:{mode:x.week?.mode||"draft",sealedAt:x.week?.sealedAt,reviewOpenUntil:x.week?.reviewOpenUntil,emergencyReviewRequestedAt:x.week?.emergencyReviewRequestedAt,emergencyReviewUnlockAt:x.week?.emergencyReviewUnlockAt,daySeals:x.week?.daySeals||{}},weekStartIso:x.weekStartIso||startOfWeekIso(),hidePastDays:!!x.hidePastDays,planningView:x.planningView==="time"?"time":"blocks",timeFilter:x.timeFilter==="morning"||x.timeFilter==="afternoon"?x.timeFilter:"both",theme:x.theme==="light"?"light":"dark",exportedAt:new Date().toISOString()};}
 
 type DropTarget = {day:DayKey;beforeBlockId?:string;timeBand?:TimeBand;timeStart?:number};
 type Drag = {type:"task";taskId:string;x:number;y:number}|{type:"block";blockId:string;x:number;y:number};
 function dropTarget(x:number,y:number):DropTarget|null{const el=document.elementFromPoint(x,y) as HTMLElement|null; if(!el)return null; const cal=el.closest<HTMLElement>("[data-calendar-day]"); if(cal?.dataset.calendarDay){const rect=cal.getBoundingClientRect(); const day=cal.dataset.calendarDay as DayKey; const frameStart=Number(cal.dataset.frameStart||CAL_START); const frameEnd=Number(cal.dataset.frameEnd||CAL_END); const timeStart=clamp(snap(frameStart+(y-rect.top)/CAL_PX_PER_MIN),frameStart,frameEnd-MIN_EVENT_MINUTES); return{day,timeStart};} const time=el.closest<HTMLElement>("[data-time-band]"); if(time?.dataset.timeBand){const day=time.closest<HTMLElement>("[data-drop-day]")?.dataset.dropDay as DayKey|undefined; if(day)return{day,timeBand:time.dataset.timeBand as TimeBand};} const block=el.closest<HTMLElement>("[data-drop-block]"); if(block?.dataset.dropBlock){const day=block.closest<HTMLElement>("[data-drop-day]")?.dataset.dropDay as DayKey|undefined; if(day)return{day,beforeBlockId:block.dataset.dropBlock};} const day=el.closest<HTMLElement>("[data-drop-day]")?.dataset.dropDay as DayKey|undefined; return day?{day}:null;}
 
 function App(){
-  const [state,setState]=useState<State>(loadState); const [drag,setDrag]=useState<Drag|null>(null); const [expanded,setExpanded]=useState<string|null>(null); const [popover,setPopover]=useState<{blockId:string;top:number;left:number;width:number}|null>(null); const [menu,setMenu]=useState(false); const [bankMenu,setBankMenu]=useState(false); const [showAdd,setShowAdd]=useState(false); const [query,setQuery]=useState(""); const [chip,setChip]=useState<"All"|Category>("All"); const [newTitle,setNewTitle]=useState(""); const [newKind,setNewKind]=useState<Kind>("discipline"); const [tick,setTick]=useState(0); const [bursts,setBursts]=useState<ParticleBurst[]>([]); const [xpFloats,setXpFloats]=useState<XpFloat[]>([]); const [beamGeom,setBeamGeom]=useState<{top:number;left:number;width:number;hasTarget:boolean}|null>(null); const planImport=useRef<HTMLInputElement|null>(null); const bankImport=useRef<HTMLInputElement|null>(null); const calendarShellRef=useRef<HTMLDivElement|null>(null);
+  const [state,setState]=useState<State>(loadState); const [drag,setDrag]=useState<Drag|null>(null); const [expanded,setExpanded]=useState<string|null>(null); const [popover,setPopover]=useState<{blockId:string;top:number;left:number;width:number}|null>(null); const [menu,setMenu]=useState(false); const [resetConfirm,setResetConfirm]=useState(false); const [bankMenu,setBankMenu]=useState(false); const [showAdd,setShowAdd]=useState(false); const [query,setQuery]=useState(""); const [chip,setChip]=useState<"All"|Category>("All"); const [newTitle,setNewTitle]=useState(""); const [newKind,setNewKind]=useState<Kind>("discipline"); const [tick,setTick]=useState(0); const [bursts,setBursts]=useState<ParticleBurst[]>([]); const [xpFloats,setXpFloats]=useState<XpFloat[]>([]); const [beamGeom,setBeamGeom]=useState<{top:number;left:number;width:number;hasTarget:boolean}|null>(null); const planImport=useRef<HTMLInputElement|null>(null); const bankImport=useRef<HTMLInputElement|null>(null); const calendarShellRef=useRef<HTMLDivElement|null>(null);
   useEffect(()=>{localStorage.setItem(STORAGE_KEY,JSON.stringify({...state,toast:undefined}));},[state]);
   useEffect(()=>{document.documentElement.dataset.theme=state.theme;},[state.theme]);
   useEffect(()=>{if(!state.toast)return; const t=window.setTimeout(()=>setState(s=>({...s,toast:undefined})),2600); return()=>clearTimeout(t);},[state.toast]);
@@ -230,7 +231,7 @@ function App(){
   function exportBank(){downloadJson(`habit-action-bank-${new Date().toISOString().slice(0,10)}.json`,{schemaVersion:28,kind:"habit-action-bank",exportedAt:new Date().toISOString(),tasks:state.tasks}); setState(s=>({...s,toast:"Action bank exported."}));}
   function exportTemplate(){downloadJson("habit-action-bank-template.json",{schemaVersion:28,kind:"habit-action-bank",exportedAt:new Date().toISOString(),tasks:{example_custom_action:makeCustom("Example Custom Action","discipline")}}); setState(s=>({...s,toast:"Template downloaded."}));}
   function starter(){if(state.blocks.length){setState(s=>({...s,toast:"Starter only works on a blank week."})); return;} const starter:[DayKey,string][]=[["mon","pushups"],["mon","tuna"],["mon","walk"],["tue","focus"],["tue","game"],["wed","pushups"],["wed","tuna"],["thu","focus"],["thu","pause"],["fri","walk"],["fri","pizza"],["sun","review"]]; let blocks:Block[]=[]; for(const [d,id] of starter){const task=state.tasks[id]; if(task) blocks.push(makeBlock(task,d,nextOrder(blocks,d)));} setState(s=>({...s,blocks:normalize(blocks),toast:blocks.length?"Starter week added.":"Starter actions were removed from the bank."}));}
-  function fullWipe(){clearPlannerPersistence(); setDrag(null); setExpanded(null); setPopover(null); setState(s=>{const next=resetPlannerState(s); try{localStorage.setItem(STORAGE_KEY,JSON.stringify({...next,toast:undefined}));}catch{} return next;});}
+  function fullWipe(){clearPlannerPersistence(); setDrag(null); setExpanded(null); setPopover(null); setMenu(false); setResetConfirm(false); setState(s=>{const next=resetPlannerState(s); try{localStorage.setItem(STORAGE_KEY,JSON.stringify({...next,toast:undefined}));}catch{} return next;});}
   function removeBankAction(taskId:string){setState(s=>{const task=s.tasks[taskId]; if(!task)return s; if(isSystemTask(task))return{...s,toast:"System actions cannot be deleted."}; const nextTasks={...s.tasks}; delete nextTasks[taskId]; const removedBlocks=s.blocks.filter(b=>b.taskId===taskId).length; const nextBlocks=normalize(s.blocks.filter(b=>b.taskId!==taskId)); const deletedTaskIds=Array.from(new Set([...(s.deletedTaskIds||[]),taskId])); return {...s,tasks:nextTasks,deletedTaskIds,blocks:nextBlocks,toast:removedBlocks?`Deleted ${task.title} and ${removedBlocks} planned block${removedBlocks===1?"":"s"}.`:`Deleted ${task.title}.`};});}
   function toggleTheme(){setState(s=>({...s,theme:s.theme==="dark"?"light":"dark",toast:s.theme==="dark"?"Light theme":"Dark theme"}));}
 
@@ -309,15 +310,14 @@ function App(){
         <div className="top-nav">
           <button className={`soft-action nav-shortcut ${state.activeView==="plan"?"active":""}`} onClick={()=>setState(s=>({...s,activeView:"plan"}))}>Plan</button>
           <button className={`soft-action nav-shortcut ${state.activeView==="today"?"active":""}`} onClick={()=>setState(s=>({...s,activeView:"today"}))}>Today</button>
-          <button className={`soft-action nav-shortcut ${state.activeView==="vault"?"active":""}`} onClick={()=>setState(s=>({...s,activeView:"vault"}))}>Vault</button>
         </div>
         <div className="top-utility">
           {state.blocks.length===0&&<button className="soft-action" onClick={starter}>Starter</button>}
           {hasAnySealed(state)&&state.week.mode!=="reviewOpen"&&state.week.mode!=="reviewPending"&&<button className="soft-action" onClick={requestGate}>Review Gate</button>}
           {state.week.mode==="reviewPending"&&<button className="soft-action" disabled={!gateReady} onClick={openGate}>{gateReady?"Open Gate":`Gate ${countdown(state.week.emergencyReviewUnlockAt)}`}</button>}
           <button className={`seal-action ${r.status}`} onClick={sealWeek}>{state.week.mode==="reviewOpen"?"Reseal":"Seal Week"}</button>
-          <button className="soft-action more-action" aria-expanded={menu} onClick={()=>setMenu(!menu)}>⋯</button>
-          {menu&&<div className="pop-menu"><button onClick={()=>{setState(s=>({...s,activeView:"vault"}));setMenu(false);}}>Open Vault</button><button className="danger-menu" onClick={()=>{fullWipe();setMenu(false);}}>Reset progress</button><button onClick={()=>{exportPlan();setMenu(false);}}>Export plan</button><button onClick={()=>{planImport.current?.click();setMenu(false);}}>Import plan</button><button onClick={()=>{toggleTheme();setMenu(false);}}>{state.theme==="dark"?"Light theme":"Dark theme"}</button><button onClick={()=>{setState(s=>({...s,weekStartIso:startOfWeekIso()}));setMenu(false);}}>This week</button></div>}
+          <button className="soft-action more-action" aria-expanded={menu} onClick={()=>{setMenu(m=>!m); if(menu)setResetConfirm(false);}}>⋯</button>
+          {menu&&<div className={`pop-menu ${resetConfirm?"confirming":""}`}>{resetConfirm?<div className="menu-reset-confirm"><strong>Clear current plan and progression?</strong><small>This wipes planned blocks, XP, tokens, streaks, completion state, and review/seal state. Reset count is preserved.</small><button className="danger-menu" onClick={fullWipe}>Confirm full reset</button><button onClick={()=>setResetConfirm(false)}>Cancel</button></div>:<><button className="danger-menu" onClick={()=>setResetConfirm(true)}>Reset progress</button><button onClick={()=>{exportPlan();setMenu(false);}}>Export plan</button><button onClick={()=>{planImport.current?.click();setMenu(false);}}>Import plan</button><button onClick={()=>{toggleTheme();setMenu(false);}}>{state.theme==="dark"?"Light theme":"Dark theme"}</button><button onClick={()=>{setState(s=>({...s,weekStartIso:startOfWeekIso()}));setMenu(false);}}>This week</button></>}</div>}
         </div>
       </div>
       <input ref={planImport} className="file-input" type="file" accept="application/json,.json" onChange={e=>importPlan(e.target.files?.[0])}/>
@@ -327,93 +327,10 @@ function App(){
   <div className="week-action-cluster"><button onClick={()=>setState(s=>({...s,weekStartIso:startOfWeekIso()}))}>Today</button><button className={state.hidePastDays?"active":""} onClick={()=>setState(s=>({...s,hidePastDays:!s.hidePastDays}))}>Hide past</button></div>
   <div className="view-cluster"><button className={state.planningView==="blocks"?"active":""} onClick={()=>setState(s=>({...s,planningView:"blocks"}))}>Blocks</button><button className={state.planningView==="time"?"active":""} onClick={()=>setState(s=>({...s,planningView:"time"}))}>Time</button></div>
   {state.planningView==="time"&&<div className="time-filter-cluster">{(["morning","afternoon","both"] as TimeFilter[]).map(f=><button key={f} className={state.timeFilter===f?"active":""} onClick={()=>setState(s=>({...s,timeFilter:f}))}>{f}</button>)}</div>}
-</div><div className={`equilibrium ${r.status}`}><div><span className="eq-dot"/><strong>{r.status==="balanced"?"Balanced":r.status==="thinIce"?"Thin ice":"Red zone"}</strong><small>{r.netTension}</small></div><span className="eq-track"><i style={{width:`${Math.max(4,Math.min(100,45+r.netTension))}%`}}/></span>{r.sealDisabledReason&&<p>{r.sealDisabledReason}</p>}</div></div><div className="week-scroll">{state.planningView==="blocks"?<div className="week-row">{visibleDays.map(day=>renderDay(day))}</div>:renderTimeView()}</div></section></>}{state.activeView==="today"&&<Today state={state} blockAction={blockAction}/>} {state.activeView==="vault"&&<Vault state={state} exportPlan={exportPlan} fullWipe={fullWipe}/>}</section>
-    <nav className="bottom-nav">{(["plan","today","vault"] as const).map(v=><button key={v} className={state.activeView===v?"active":""} onClick={()=>setState(s=>({...s,activeView:v}))}>{v[0].toUpperCase()+v.slice(1)}</button>)}</nav>{state.toast&&<div className="toast glass-panel">{state.toast}</div>}{drag&&dragTask&&<div className="drag-overlay" style={{left:drag.x,top:drag.y}}><div className={`mini-card ${dragTask.accent}`}><span>{dragTask.icon}</span><strong>{dragTask.title}</strong></div></div>}{bursts.map(b=><div key={b.id} className={`completion-burst ${b.mode}`} style={{left:b.x,top:b.y}}>{Array.from({length:b.mode==="level"?22:14},(_,i)=><span key={i} style={{["--i" as any]:i} as React.CSSProperties}/> )}</div>)}{xpFloats.map(f=><div key={f.id} className={`xp-float ${f.levelUp?"level-up":""}`} style={{left:f.x,top:f.y}}><strong>+{f.xp} XP</strong>{f.levelUp&&<span>LEVEL {f.levelUp}</span>}</div>)}
+</div><div className={`equilibrium ${r.status}`}><div><span className="eq-dot"/><strong>{r.status==="balanced"?"Balanced":r.status==="thinIce"?"Thin ice":"Red zone"}</strong><small>{r.netTension}</small></div><span className="eq-track"><i style={{width:`${Math.max(4,Math.min(100,45+r.netTension))}%`}}/></span>{r.sealDisabledReason&&<p>{r.sealDisabledReason}</p>}</div></div><div className="week-scroll">{state.planningView==="blocks"?<div className="week-row">{visibleDays.map(day=>renderDay(day))}</div>:renderTimeView()}</div></section></>}{state.activeView==="today"&&<Today state={state} blockAction={blockAction}/>}</section>
+    <nav className="bottom-nav">{(["plan","today"] as const).map(v=><button key={v} className={state.activeView===v?"active":""} onClick={()=>setState(s=>({...s,activeView:v}))}>{v[0].toUpperCase()+v.slice(1)}</button>)}</nav>{state.toast&&<div className="toast glass-panel">{state.toast}</div>}{drag&&dragTask&&<div className="drag-overlay" style={{left:drag.x,top:drag.y}}><div className={`mini-card ${dragTask.accent}`}><span>{dragTask.icon}</span><strong>{dragTask.title}</strong></div></div>}{bursts.map(b=><div key={b.id} className={`completion-burst ${b.mode}`} style={{left:b.x,top:b.y}}>{Array.from({length:b.mode==="level"?22:14},(_,i)=><span key={i} style={{["--i" as any]:i} as React.CSSProperties}/> )}</div>)}{xpFloats.map(f=><div key={f.id} className={`xp-float ${f.levelUp?"level-up":""}`} style={{left:f.x,top:f.y}}><strong>+{f.xp} XP</strong>{f.levelUp&&<span>LEVEL {f.levelUp}</span>}</div>)}
   </main>;
 }
 function Today({state,blockAction}:{state:State;blockAction:(id:string,a:"tier"|"done"|"missed"|"remove"|"pause"|"review")=>void}){const blocks=dayBlocks(state.blocks,state.selectedDay); const current=blocks.find(b=>b.status==="planned"||b.status==="recoveryDue"); return <section className="today-panel glass-panel"><div className="today-head"><div className="today-ring"><span>{blocks.length?Math.round(blocks.filter(b=>b.status==="done"||b.status==="paused").length/blocks.length*100):0}%</span></div><div><h1>Today</h1><p>Assumed complete unless you report otherwise.</p></div></div>{current&&state.tasks[current.taskId]?<article className="today-current"><strong>{state.tasks[current.taskId].title}</strong><button onClick={()=>blockAction(current.id,"done")}>Done</button><button onClick={()=>blockAction(current.id,"missed")}>Missed</button></article>:<div className="quiet-empty">No active exception.</div>}<div className="today-queue">{blocks.map(b=>{const t=state.tasks[b.taskId]; return t?<div className={`queue-line ${b.status}`} key={b.id}><span>{t.icon}</span><strong>{t.title}</strong><small>{b.status}</small></div>:null;})}</div></section>}
-function Vault({state,exportPlan,fullWipe}:{state:State;exportPlan:()=>void;fullWipe:()=>void}){
-  const [confirming,setConfirming]=useState(false);
-  const progress=rsProgress(state.player.xp);
-  const rewardTasks=Object.values(state.tasks).filter(t=>t.kind==="reward");
-  const sealedDays=DAYS.filter(day=>isDaySealed(state,day)).length;
-  const completedBlocks=state.blocks.filter(b=>b.status==="done").length;
-  const planStatus=state.blocks.length?`${state.blocks.length} planned block${state.blocks.length===1?"":"s"}`:"Empty draft week";
-  const weekState=state.week.mode==="reviewOpen"?"Review open":state.week.mode==="reviewPending"?"Review pending":state.week.mode==="sealed"?"Week sealed":sealedDays?`${sealedDays} sealed day${sealedDays===1?"":"s"}`:"Draft";
-  const confirmReset=()=>{setConfirming(false); fullWipe();};
-  return <section className="vault-panel glass-panel">
-    <div className="vault-shell">
-      <header className="vault-hero">
-        <div className="vault-hero-copy">
-          <span className="vault-mark">✦</span>
-          <div>
-            <h1>Vault</h1>
-            <p>Rewards, progression, escape hatches, and protected system rules.</p>
-          </div>
-        </div>
-        <div className="vault-xp-block">
-          <div className="vault-level-line"><strong>Level {progress.level}</strong><span>{compactNumber(progress.xp)} XP</span></div>
-          <div className="vault-xp-track"><i style={{width:`${progress.progress*100}%`}}/><small>{progress.level>=RS_MAX_LEVEL?"Maximum level reached":`${compactNumber(progress.remaining)} XP to level ${progress.level+1}`}</small></div>
-        </div>
-      </header>
-
-      <div className="vault-content-grid">
-        <section className="vault-section vault-progression" aria-label="Progression">
-          <div className="vault-section-head"><small>Progression</small><strong>Character state</strong></div>
-          <div className="vault-stat-grid">
-            <div><span>Level</span><strong>{progress.level} / {RS_MAX_LEVEL}</strong></div>
-            <div><span>XP</span><strong>{compactNumber(progress.xp)}</strong></div>
-            <div><span>Tokens</span><strong>{state.player.tokens}</strong></div>
-            <div><span>Streak</span><strong>{state.player.streakDays}</strong></div>
-          </div>
-          <p>XP uses the classic exponential level curve. Level 99 requires {compactNumber(RS_XP_CAP)} total XP.</p>
-        </section>
-
-        <section className="vault-section vault-rewards" aria-label="Rewards">
-          <div className="vault-section-head"><small>Rewards</small><strong>Token spend</strong></div>
-          <div className="reward-ledger">
-            {rewardTasks.map(t=><article key={t.id}><span>{t.icon}</span><div><strong>{t.title}</strong><small>{t.tokenCost} token{t.tokenCost===1?"":"s"} · {getTier(t,2).label}</small></div></article>)}
-            {!rewardTasks.length&&<div className="vault-empty">No reward actions in the bank.</div>}
-          </div>
-        </section>
-
-        <section className="vault-section vault-plan-state" aria-label="Current plan state">
-          <div className="vault-section-head"><small>Current plan</small><strong>{weekState}</strong></div>
-          <div className="vault-state-list">
-            <div><span>Blocks</span><strong>{planStatus}</strong></div>
-            <div><span>Completed</span><strong>{completedBlocks}</strong></div>
-            <div><span>Review gate</span><strong>{state.week.mode==="reviewPending"?"Armed":state.week.mode==="reviewOpen"?"Open":"Closed"}</strong></div>
-            <div><span>Resets</span><strong>{state.player.resetCount}</strong></div>
-          </div>
-        </section>
-
-        <section className={`vault-section vault-reset ${confirming?"confirming":""}`} aria-label="Full reset">
-          <div className="vault-section-head"><small>Costly escape hatch</small><strong>Full reset</strong></div>
-          <p>Wipes level, XP, tokens, streak, completion state, sealed/review state, and every planned block in the current plan. The Action Bank remains. Reset count is preserved.</p>
-          {!confirming?<button className="danger-reset" onClick={()=>setConfirming(true)}>Reset progress</button>:<div className="reset-confirm">
-            <strong>Clear the current plan and progression?</strong>
-            <small>This cannot be undone from the app.</small>
-            <div><button className="danger-reset" onClick={confirmReset}>Confirm full reset</button><button className="quiet-reset" onClick={()=>setConfirming(false)}>Cancel</button></div>
-          </div>}
-        </section>
-
-        <section className="vault-section vault-export" aria-label="Plan export">
-          <div className="vault-section-head"><small>Portable state</small><strong>Plan export</strong></div>
-          <p>Download the current plan and bank state as JSON for backup or migration.</p>
-          <button onClick={exportPlan}>Export plan</button>
-        </section>
-
-        <section className="vault-section vault-system" aria-label="System rules">
-          <div className="vault-section-head"><small>System</small><strong>Protected rules</strong></div>
-          <div className="vault-rule-list">
-            <article><span>◈</span><div><strong>Review-gated editing</strong><small>Sealed plans unlock through a Review block, not casual editing.</small></div></article>
-            <article><span>Ⅱ</span><div><strong>Protected system blocks</strong><small>Review, Pause, and Recovery blocks are part of the safety system.</small></div></article>
-            <article><span>×</span><div><strong>Bank deletion is permanent</strong><small>Hover a removable Action Bank block and press ×. The action and its planned blocks are removed and stay removed.</small></div></article>
-          </div>
-        </section>
-      </div>
-    </div>
-  </section>;
-}
 class ErrorBoundary extends React.Component<{children:React.ReactNode},{error?:Error}>{state:{error?:Error}={}; static getDerivedStateFromError(error:Error){return{error};} render(){if(this.state.error)return <main className="fallback-screen"><section className="fallback-card"><h1>Planner could not start.</h1><p>{this.state.error.message}</p><button onClick={()=>{for(const k of Object.keys(localStorage))if(k.startsWith("habit-planner-rpg"))localStorage.removeItem(k); location.reload();}}>Reset local plan</button></section></main>; return this.props.children;}}
 ReactDOM.createRoot(document.getElementById("root")!).render(<React.StrictMode><ErrorBoundary><App/></ErrorBoundary></React.StrictMode>);

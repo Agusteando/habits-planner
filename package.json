@@ -1,7 +1,7 @@
 {
-  "name": "habit-planner-rpg-v39",
+  "name": "habit-planner-rpg-v41",
   "private": true,
-  "version": "3.9.0",
+  "version": "4.1.0",
   "type": "module",
   "scripts": {
     "dev": "vite --host 0.0.0.0",
