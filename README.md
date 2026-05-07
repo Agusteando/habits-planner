@@ -13,9 +13,3 @@ Updates in this pass:
 - No package-lock.json or node_modules is included.
 
 Build note: this package requires dependencies from package.json. The local handoff environment did not include node_modules, so a full Vite rebuild could not be completed here. Source TSX transpilation and prebuilt dist JS syntax checks passed.
-
-Windows run note:
-
-- Use `START_HABIT_PLANNER.cmd` from the extracted folder to run the included `dist` build. This launcher does not use or copy `zipdev.exe`.
-- Use `RUN_DEV_WITH_NPM.cmd` only if you want the Vite development server and have Node.js/npm installed.
-

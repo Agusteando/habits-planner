@@ -141,9 +141,12 @@ button:disabled {
 
 .glass-panel::after {
   z-index: 0;
-  background-image: var(--asset-panel-ornament);
-  background-size: 100% 100%;
-  opacity: .09;
+  inset: 1px;
+  border: 1px solid rgba(117, 244, 255, .08);
+  background:
+    linear-gradient(90deg, rgba(255, 209, 102, .12), transparent 18%, transparent 82%, rgba(117, 244, 255, .12)),
+    linear-gradient(180deg, rgba(255, 255, 255, .07), transparent 20%, transparent 80%, rgba(255, 255, 255, .05));
+  opacity: .42;
 }
 
 .glass-panel > * {
@@ -214,18 +217,15 @@ button:disabled {
   width: 42px;
   height: 42px;
   display: block;
-  background-image: var(--asset-brand-mark);
-  background-size: contain;
+  background-image: var(--asset-icon-sprite);
+  background-size: 600% 400%;
+  background-position: 100% 100%;
   background-repeat: no-repeat;
-  background-position: center;
   filter: drop-shadow(0 0 14px rgba(117, 244, 255, .25));
 }
 
 .brand-mark img {
-  width: 100%;
-  height: 100%;
-  display: block;
-  object-fit: contain;
+  display: none;
 }
 
 .brand-copy {
@@ -1107,7 +1107,9 @@ button:disabled {
   inset: 0;
   pointer-events: none;
   border-radius: inherit;
-  background-image: var(--asset-panel-ornament), var(--asset-border-metal);
+  background-image:
+    linear-gradient(90deg, rgba(117, 244, 255, .10), transparent 18%, transparent 82%, rgba(255, 209, 102, .10)),
+    var(--asset-border-metal);
   background-size: 100% 100%, cover;
   background-position: center;
   background-blend-mode: screen, overlay;
@@ -2534,4 +2536,278 @@ button:disabled {
 
 :root[data-theme="light"] .day-column.today .day-head {
   position: relative;
+}
+
+/* Patch v3: refined sealed treatment, upgraded bars, and clearer timer/XP states. */
+.day-column,
+.calendar-day-head,
+.calendar-day-lane {
+  position: relative;
+  isolation: isolate;
+}
+
+.day-column > *,
+.calendar-day-head > *,
+.calendar-day-lane > * {
+  position: relative;
+  z-index: 1;
+}
+
+.day-column.sealed,
+.calendar-day-head.sealed,
+.calendar-day-lane.sealed {
+  border-color: rgba(255, 209, 102, .26);
+  box-shadow: inset 0 0 0 1px rgba(255, 209, 102, .08), 0 10px 28px rgba(255, 180, 70, .08);
+}
+
+.day-column.sealed {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, .055), rgba(255, 255, 255, .015)),
+    radial-gradient(120% 80% at 50% -10%, rgba(255, 209, 102, .08), transparent 58%),
+    rgba(0, 0, 0, .12);
+}
+
+.seal-trail {
+  position: absolute;
+  inset: -1px;
+  pointer-events: none;
+  z-index: 0;
+  border-radius: inherit;
+  overflow: hidden;
+}
+
+.seal-trail::before,
+.seal-trail::after,
+.seal-trail span,
+.seal-trail span::before,
+.seal-trail span::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+}
+
+.seal-trail::before {
+  padding: 1px;
+  background: conic-gradient(from 0deg,
+    rgba(255, 209, 102, 0) 0deg,
+    rgba(255, 209, 102, .12) 36deg,
+    rgba(117, 244, 255, .65) 74deg,
+    rgba(255, 209, 102, .95) 102deg,
+    rgba(255, 209, 102, .08) 146deg,
+    rgba(255, 209, 102, 0) 210deg,
+    rgba(117, 244, 255, .35) 252deg,
+    rgba(255, 209, 102, .75) 300deg,
+    rgba(255, 209, 102, 0) 360deg);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: .95;
+  animation: sealOrbit 7s linear infinite;
+}
+
+.seal-trail::after {
+  inset: 6px;
+  border: 1px solid rgba(255, 209, 102, .12);
+  opacity: .7;
+}
+
+.seal-trail span:nth-child(1) {
+  inset: auto auto auto -24%;
+  width: 52%;
+  height: 9px;
+  top: 10%;
+  background: linear-gradient(90deg, transparent, rgba(117, 244, 255, .9), rgba(255, 209, 102, .95), transparent);
+  filter: blur(1px);
+  transform: rotate(-8deg);
+  animation: sealSweepOne 8s ease-in-out infinite;
+}
+
+.seal-trail span:nth-child(2) {
+  inset: auto -22% 18% auto;
+  width: 48%;
+  height: 10px;
+  background: linear-gradient(90deg, transparent, rgba(255, 209, 102, .92), rgba(117, 244, 255, .72), transparent);
+  filter: blur(1.2px);
+  transform: rotate(12deg);
+  animation: sealSweepTwo 9s ease-in-out infinite;
+}
+
+.seal-trail span:nth-child(3) {
+  inset: auto auto 28% -18%;
+  width: 42%;
+  height: 8px;
+  background: linear-gradient(90deg, transparent, rgba(255, 209, 102, .7), rgba(255, 241, 188, .95), transparent);
+  filter: blur(1px);
+  animation: sealSweepThree 10s ease-in-out infinite;
+}
+
+.seal-trail.mini { inset: 0; }
+.seal-trail.mini::before { opacity: .72; }
+.seal-trail.mini::after { inset: 3px; opacity: .45; }
+.seal-trail.mini span { height: 6px !important; filter: blur(.8px); }
+
+.day-head,
+.calendar-day-head {
+  background: rgba(0, 0, 0, .10);
+}
+
+.sealed-button,
+.day-column.sealed .day-head button {
+  color: #f5e7b3;
+  border-color: rgba(255, 209, 102, .24);
+  background: linear-gradient(180deg, rgba(255, 209, 102, .16), rgba(255, 209, 102, .06));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.12), 0 0 0 1px rgba(255, 209, 102, .06);
+}
+
+.block-stat-row span.locked {
+  color: rgba(255, 224, 150, .95);
+  border-color: rgba(255, 209, 102, .18);
+  background: linear-gradient(180deg, rgba(255, 209, 102, .12), rgba(255, 209, 102, .04));
+}
+
+.xp-status,
+.equilibrium,
+.block-timer {
+  --bar-track: rgba(255, 255, 255, .055);
+  --bar-line: rgba(255, 255, 255, .08);
+}
+
+.xp-status,
+.equilibrium {
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.07), rgba(255,255,255,.025)),
+    rgba(8, 10, 12, .34);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.08), 0 12px 30px rgba(0,0,0,.16);
+}
+
+.xp-status i,
+.eq-track,
+.block-timer i {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--bar-line);
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.01)),
+    var(--bar-track);
+  box-shadow: inset 0 1px 2px rgba(0,0,0,.28);
+}
+
+.xp-status i {
+  height: 10px;
+}
+
+.eq-track {
+  height: 10px;
+}
+
+.block-timer {
+  margin-top: 2px;
+  grid-template-columns: minmax(0, auto) minmax(78px, 1fr);
+  gap: 9px;
+}
+
+.block-timer span {
+  color: rgba(239, 240, 244, .84);
+  font-weight: 800;
+}
+
+.block-timer i {
+  height: 8px;
+}
+
+.xp-status i::before,
+.eq-track::before,
+.block-timer i::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(90deg, rgba(255,255,255,.065) 0 10px, transparent 10px 18px);
+  mix-blend-mode: screen;
+  opacity: .55;
+  pointer-events: none;
+}
+
+.xp-status i em,
+.eq-track i,
+.block-timer i em {
+  position: relative;
+  overflow: hidden;
+}
+
+.xp-status i em::after,
+.eq-track i::after,
+.block-timer i em::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 42%;
+  right: -12%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.52), transparent);
+  filter: blur(2px);
+  animation: uiBarSheen 2.8s linear infinite;
+}
+
+.block-timer.review i em { background: linear-gradient(90deg, rgba(117, 244, 255, .7), rgba(117, 244, 255, 1), rgba(170, 255, 224, .95)); }
+.block-timer.pause i em { background: linear-gradient(90deg, rgba(168, 196, 255, .7), rgba(124, 171, 255, 1), rgba(205, 225, 255, .95)); }
+.block-timer.recovery i em { background: linear-gradient(90deg, rgba(255, 185, 84, .75), rgba(255, 209, 102, 1), rgba(255, 241, 188, .95)); }
+.block-timer.cooldown i em { background: linear-gradient(90deg, rgba(167, 144, 255, .76), rgba(117, 244, 255, .94), rgba(255, 209, 102, .88)); }
+
+.eq-track i {
+  background: linear-gradient(90deg, rgba(84,255,169,.95), rgba(255,209,102,.96), rgba(255,95,127,.94));
+}
+
+:root[data-theme="light"] .xp-status,
+:root[data-theme="light"] .equilibrium {
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.96), rgba(248,250,255,.88)),
+    rgba(255,255,255,.72);
+}
+
+:root[data-theme="light"] .xp-status i,
+:root[data-theme="light"] .eq-track,
+:root[data-theme="light"] .block-timer i {
+  border-color: rgba(31, 41, 55, .10);
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.95), rgba(241,245,249,.84)),
+    rgba(15, 23, 42, .06);
+}
+
+:root[data-theme="light"] .day-column.sealed,
+:root[data-theme="light"] .calendar-day-head.sealed,
+:root[data-theme="light"] .calendar-day-lane.sealed {
+  border-color: rgba(214, 162, 30, .30);
+  box-shadow: inset 0 0 0 1px rgba(214, 162, 30, .09), 0 10px 28px rgba(214, 162, 30, .10);
+}
+
+@keyframes uiBarSheen {
+  from { transform: translateX(-140%); }
+  to { transform: translateX(220%); }
+}
+
+@keyframes sealOrbit {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes sealSweepOne {
+  0%, 100% { transform: translate3d(-16%, 0, 0) rotate(-8deg); opacity: .1; }
+  18% { opacity: .95; }
+  42% { transform: translate3d(112%, 24%, 0) rotate(15deg); opacity: .72; }
+  60% { opacity: .22; }
+}
+
+@keyframes sealSweepTwo {
+  0%, 100% { transform: translate3d(0, 0, 0) rotate(12deg); opacity: .15; }
+  22% { opacity: .88; }
+  48% { transform: translate3d(-126%, -34%, 0) rotate(-10deg); opacity: .68; }
+  70% { opacity: .2; }
+}
+
+@keyframes sealSweepThree {
+  0%, 100% { transform: translate3d(-12%, 0, 0); opacity: .12; }
+  25% { opacity: .7; }
+  55% { transform: translate3d(132%, -40%, 0); opacity: .52; }
+  72% { opacity: .15; }
 }
