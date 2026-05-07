@@ -28,7 +28,7 @@ function makeWrapCurve({
   drift = 0.12
 } = {}) {
   const points = [];
-  const steps = 280;
+  const steps = 200;
   for (let i = 0; i < steps; i += 1) {
     const u = i / (steps - 1);
     const theta = phase + u * turns * TAU + Math.sin(u * TAU * 1.6 + phase) * wobble;
@@ -81,14 +81,14 @@ function buildStrand(effect, options) {
   const strand = new THREE.Group();
 
   const halo = new THREE.Mesh(
-    new THREE.TubeGeometry(curve, 240, options.haloRadius || 0.042, 12, false),
+    new THREE.TubeGeometry(curve, 180, options.haloRadius || 0.042, 10, false),
     makeMaterial({ color: options.haloColor, opacity: options.haloOpacity || 0.06 })
   );
   halo.renderOrder = 1;
   strand.add(halo);
 
   const core = new THREE.Mesh(
-    new THREE.TubeGeometry(curve, 240, options.coreRadius || 0.012, 10, false),
+    new THREE.TubeGeometry(curve, 180, options.coreRadius || 0.012, 8, false),
     makeMaterial({ color: options.coreColor, emissive: options.emissiveColor, opacity: options.coreOpacity || 0.3, phong: true })
   );
   core.renderOrder = 2;
@@ -118,7 +118,7 @@ function buildEffect(el) {
   el.prepend(mount);
 
   const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true, powerPreference: "low-power" });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.75));
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.35));
   renderer.setClearColor(0x000000, 0);
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.domElement.style.width = "100%";
@@ -179,7 +179,7 @@ function buildEffect(el) {
     haloRadius: 0.058,
     coreOpacity: 0.34,
     haloOpacity: 0.078,
-    sparkCount: 26
+    sparkCount: 8
   });
 
   buildStrand(effect, {
@@ -201,7 +201,7 @@ function buildEffect(el) {
     haloRadius: 0.038,
     coreOpacity: 0.25,
     haloOpacity: 0.05,
-    sparkCount: 18
+    sparkCount: 8
   });
 
   buildStrand(effect, {
@@ -223,7 +223,7 @@ function buildEffect(el) {
     haloRadius: 0.026,
     coreOpacity: 0.16,
     haloOpacity: 0.028,
-    sparkCount: 12
+    sparkCount: 8
   });
 
   const topHoop = buildHoop(1.3, 0.82, 0xffd871, 0.11, 0.06);
@@ -334,14 +334,14 @@ function animate(timeMs) {
     resizeEffect(effect);
 
     const slow = reduceMotion ? 0 : time;
-    effect.group.rotation.y = effect.phase * 0.18 + slow * 0.44;
-    effect.group.rotation.x = -0.16 + Math.sin(slow * 0.42 + effect.phase) * 0.052;
-    effect.group.rotation.z = 0.05 + Math.sin(slow * 0.28 + effect.phase) * 0.025;
+    effect.group.rotation.y = effect.phase * 0.18 + slow * 0.32;
+    effect.group.rotation.x = -0.15 + Math.sin(slow * 0.36 + effect.phase) * 0.04;
+    effect.group.rotation.z = 0.05 + Math.sin(slow * 0.24 + effect.phase) * 0.016;
 
     effect.strands.forEach((strand, index) => {
       const wave = reduceMotion ? 0 : Math.sin(time * (0.82 + index * 0.18) + strand.phase);
-      strand.strand.rotation.y = slow * (0.06 + index * 0.028) * (index % 2 ? -1 : 1);
-      strand.strand.rotation.z = Math.sin(slow * 0.44 + index + effect.phase) * 0.03;
+      strand.strand.rotation.y = slow * (0.045 + index * 0.02) * (index % 2 ? -1 : 1);
+      strand.strand.rotation.z = Math.sin(slow * 0.34 + index + effect.phase) * 0.02;
       strand.core.material.opacity = clamp(strand.coreOpacity + wave * 0.034, 0.02, 0.5);
       strand.halo.material.opacity = clamp(strand.haloOpacity + wave * 0.014, 0.01, 0.15);
       if (strand.core.material.emissiveIntensity !== undefined) {
@@ -351,19 +351,19 @@ function animate(timeMs) {
     });
 
     effect.hoops.forEach((hoop, index) => {
-      hoop.rotation.z = slow * (0.23 + index * 0.07) * (index === 1 ? -1 : 1);
-      hoop.rotation.x = Math.PI * 0.5 + Math.sin(slow * 0.32 + index) * 0.06;
+      hoop.rotation.z = slow * (0.17 + index * 0.05) * (index === 1 ? -1 : 1);
+      hoop.rotation.x = Math.PI * 0.5 + Math.sin(slow * 0.26 + index) * 0.04;
       hoop.material.opacity = reduceMotion ? 0.05 : clamp((index === 1 ? 0.05 : 0.085) + Math.sin(time * 0.9 + index) * 0.018, 0.025, 0.11);
     });
 
     if (effect.aura) {
       effect.aura.material.opacity = reduceMotion ? 0.012 : 0.02 + Math.sin(time * 0.62 + effect.phase) * 0.007;
-      effect.aura.rotation.y = slow * -0.11;
+      effect.aura.rotation.y = slow * -0.08;
     }
 
     if (effect.innerGlow) {
       effect.innerGlow.material.opacity = reduceMotion ? 0.02 : 0.022 + Math.sin(time * 0.74 + effect.phase) * 0.006;
-      effect.innerGlow.rotation.y = slow * 0.06;
+      effect.innerGlow.rotation.y = slow * 0.04;
     }
 
     effect.renderer.render(effect.scene, effect.camera);
