@@ -65,16 +65,6 @@ function makeMaterial({ color, opacity, emissive, additive = true, phong = false
   });
 }
 
-function buildHoop(y, radius, color, opacity, tilt = 0) {
-  const hoop = new THREE.Mesh(
-    new THREE.TorusGeometry(radius, 0.01, 8, 120),
-    makeMaterial({ color, opacity })
-  );
-  hoop.position.y = y;
-  hoop.rotation.x = Math.PI * 0.5 + tilt;
-  hoop.scale.set(1, 1, 0.52);
-  return hoop;
-}
 
 function buildStrand(effect, options) {
   const curve = makeWrapCurve(options);
@@ -226,12 +216,6 @@ function buildEffect(el) {
     sparkCount: 8
   });
 
-  const topHoop = buildHoop(1.3, 0.82, 0xffd871, 0.11, 0.06);
-  const midHoop = buildHoop(0.0, 1.02, 0x68efff, 0.06, -0.04);
-  const lowHoop = buildHoop(-1.3, 0.82, 0xffd871, 0.095, -0.07);
-  group.add(topHoop, midHoop, lowHoop);
-  effect.hoops.push(topHoop, midHoop, lowHoop);
-
   const aura = new THREE.Mesh(
     new THREE.CylinderGeometry(1.02, 1.02, 3.0, 48, 1, true),
     makeMaterial({ color: 0x69e7ff, opacity: 0.02 })
@@ -350,11 +334,6 @@ function animate(timeMs) {
       updateComet(strand, time, reduceMotion);
     });
 
-    effect.hoops.forEach((hoop, index) => {
-      hoop.rotation.z = slow * (0.17 + index * 0.05) * (index === 1 ? -1 : 1);
-      hoop.rotation.x = Math.PI * 0.5 + Math.sin(slow * 0.26 + index) * 0.04;
-      hoop.material.opacity = reduceMotion ? 0.05 : clamp((index === 1 ? 0.05 : 0.085) + Math.sin(time * 0.9 + index) * 0.018, 0.025, 0.11);
-    });
 
     if (effect.aura) {
       effect.aura.material.opacity = reduceMotion ? 0.012 : 0.02 + Math.sin(time * 0.62 + effect.phase) * 0.007;
