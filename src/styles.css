@@ -2811,3 +2811,163 @@ button:disabled {
   55% { transform: translate3d(132%, -40%, 0); opacity: .52; }
   72% { opacity: .15; }
 }
+
+/* Patch v4: subtler sealed columns, three.js overlay support, and refined beam hit styling. */
+.day-column.sealed {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, .045), rgba(255, 255, 255, .012)),
+    radial-gradient(120% 74% at 50% -4%, rgba(255, 209, 102, .045), transparent 62%),
+    rgba(0, 0, 0, .12);
+  box-shadow: inset 0 0 0 1px rgba(255, 209, 102, .05), 0 8px 24px rgba(255, 180, 70, .05);
+}
+
+.day-column.sealed > .seal-trail {
+  inset: 0;
+  opacity: .22;
+}
+
+.day-column.sealed > .seal-trail::before {
+  animation: none;
+  opacity: .20;
+  background: linear-gradient(180deg, rgba(255, 209, 102, .28), rgba(117, 244, 255, .16));
+}
+
+.day-column.sealed > .seal-trail::after {
+  inset: 0;
+  border-color: rgba(255, 209, 102, .09);
+  opacity: .75;
+}
+
+.day-column.sealed > .seal-trail span {
+  display: none;
+}
+
+.calendar-day-head > .seal-trail.mini,
+.calendar-day-lane > .seal-trail.mini {
+  opacity: .26;
+}
+
+.calendar-day-head > .seal-trail.mini::before,
+.calendar-day-lane > .seal-trail.mini::before {
+  animation: none;
+  opacity: .38;
+  background: linear-gradient(180deg, rgba(255, 209, 102, .24), rgba(117, 244, 255, .14));
+}
+
+.calendar-day-head > .seal-trail.mini::after,
+.calendar-day-lane > .seal-trail.mini::after {
+  inset: 1px;
+  opacity: .24;
+}
+
+.calendar-day-head > .seal-trail.mini span,
+.calendar-day-lane > .seal-trail.mini span {
+  display: none;
+}
+
+.seal-threefx {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  overflow: hidden;
+  opacity: .95;
+}
+
+.seal-threefx canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  filter: saturate(1.05) blur(.15px);
+}
+
+.calendar-beam {
+  transform: translateY(-50%);
+  opacity: .88;
+}
+
+.calendar-beam .beam-core {
+  height: 2px;
+  background: linear-gradient(90deg, rgba(117, 244, 255, .06), rgba(117, 244, 255, .62) 54%, rgba(255, 248, 207, .72) 82%, rgba(255,255,255,.12));
+  box-shadow: 0 0 10px rgba(117, 244, 255, .22), 0 0 20px rgba(255, 209, 102, .07);
+  animation: beamGlide 3.6s ease-in-out infinite;
+}
+
+.calendar-beam.has-target .beam-core {
+  height: 2px;
+  background: linear-gradient(90deg, rgba(117, 244, 255, .08), rgba(117, 244, 255, .72) 58%, rgba(255, 248, 207, .84) 84%, rgba(255,255,255,.18));
+}
+
+.calendar-beam .beam-aura {
+  left: -4px;
+  right: -4px;
+  top: -6px;
+  height: 14px;
+  background: linear-gradient(90deg, transparent, rgba(117, 244, 255, .12), rgba(255, 209, 102, .06), transparent);
+  filter: blur(7px);
+  opacity: .72;
+}
+
+.calendar-beam .beam-sparks {
+  right: -8px;
+  top: -12px;
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  background-image: none;
+  background: radial-gradient(circle, rgba(255, 248, 207, .9) 0, rgba(117, 244, 255, .34) 34%, rgba(117, 244, 255, .10) 56%, transparent 72%);
+  filter: blur(.5px);
+  animation: beamTipPulse 2.4s ease-in-out infinite;
+}
+
+.calendar-beam span {
+  top: -22px;
+  padding: 2px 7px;
+  border-color: rgba(117, 244, 255, .16);
+  background: rgba(6, 10, 12, .68);
+  box-shadow: 0 8px 16px rgba(0,0,0,.16);
+}
+
+.calendar-event-shell.beam-hit-shell::before {
+  left: -10px;
+  width: 30px;
+  height: 30px;
+  background-image: none;
+  background: radial-gradient(circle, rgba(255, 248, 207, .74) 0, rgba(117, 244, 255, .26) 34%, rgba(117, 244, 255, .10) 52%, transparent 72%);
+  filter: blur(.4px);
+  animation: beamHitHalo 2.6s ease-in-out infinite;
+}
+
+.calendar-event-shell.beam-hit-shell .time-card {
+  border-color: rgba(117, 244, 255, .28);
+  box-shadow: 0 14px 32px rgba(0, 0, 0, .34), 0 0 18px rgba(117, 244, 255, .11), inset 10px 0 18px rgba(117, 244, 255, .07);
+}
+
+.calendar-event-shell.beam-hit-shell .block-icon {
+  border-color: rgba(117, 244, 255, .18);
+  box-shadow: 0 0 12px rgba(117, 244, 255, .12), inset 0 1px 0 rgba(255, 255, 255, .08);
+}
+
+@keyframes beamGlide {
+  0%, 100% { opacity: .78; transform: scaleX(.996); }
+  50% { opacity: .98; transform: scaleX(1); }
+}
+
+@keyframes beamTipPulse {
+  0%, 100% { transform: scale(.86); opacity: .52; }
+  50% { transform: scale(1.02); opacity: .84; }
+}
+
+@keyframes beamHitHalo {
+  0%, 100% { transform: translateY(-50%) scale(.88); opacity: .26; }
+  50% { transform: translateY(-50%) scale(1.05); opacity: .54; }
+}
+
+:root[data-theme="light"] .day-column.sealed {
+  box-shadow: inset 0 0 0 1px rgba(214, 162, 30, .07), 0 8px 24px rgba(214, 162, 30, .05);
+}
+
+:root[data-theme="light"] .calendar-beam span {
+  background: rgba(255,255,255,.84);
+}
