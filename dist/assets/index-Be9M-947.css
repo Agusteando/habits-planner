@@ -553,3 +553,159 @@
 :root[data-theme="light"] .calendar-day-lane > .seal-threefx {
   opacity: .86;
 }
+
+/* Patch v7: more spatial seal overlay and minimal sealed blocks. */
+.day-column.sealed,
+.calendar-day-lane.sealed {
+  perspective: 1200px;
+  perspective-origin: 50% 50%;
+}
+
+.day-column > .seal-threefx,
+.calendar-day-lane > .seal-threefx {
+  inset: -26px -34px;
+  opacity: 1;
+}
+
+.calendar-day-lane > .seal-threefx {
+  inset: -30px -42px;
+}
+
+.day-column > .seal-threefx canvas,
+.calendar-day-lane > .seal-threefx canvas {
+  filter: saturate(1.18) contrast(1.07) blur(.08px);
+}
+
+.day-column.sealed .day-stack {
+  gap: 12px;
+}
+
+.day-column.sealed .block-card,
+.calendar-day-lane.sealed .block-card.time-card {
+  overflow: hidden;
+  backdrop-filter: blur(14px) saturate(122%);
+}
+
+.day-column.sealed .block-card {
+  padding: 12px 12px 12px 14px;
+  min-height: 66px;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.03)),
+    rgba(8, 11, 12, .72);
+  box-shadow: 0 14px 30px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.08);
+}
+
+.day-column.sealed .block-main {
+  grid-template-columns: 38px minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+}
+
+.day-column.sealed .block-icon {
+  width: 38px;
+  height: 38px;
+}
+
+.day-column.sealed .block-copy {
+  gap: 0;
+  align-content: center;
+}
+
+.day-column.sealed .block-title-row strong,
+.calendar-day-lane.sealed .block-title-row strong {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.day-column.sealed .block-title-row strong {
+  font-size: 14px;
+  line-height: 1.2;
+}
+
+.day-column.sealed .block-meta-row,
+.day-column.sealed .block-copy small,
+.day-column.sealed .block-stat-row,
+.day-column.sealed .block-timer {
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  visibility: hidden;
+  pointer-events: none;
+  margin: 0;
+  transform: translateY(-4px);
+  transition: max-height .18s ease, opacity .18s ease, transform .18s ease, margin .18s ease, visibility .18s ease;
+}
+
+.day-column.sealed .block-card:hover .block-meta-row,
+.day-column.sealed .block-card:hover .block-copy small,
+.day-column.sealed .block-card:hover .block-stat-row,
+.day-column.sealed .block-card:hover .block-timer,
+.day-column.sealed .block-card:focus-within .block-meta-row,
+.day-column.sealed .block-card:focus-within .block-copy small,
+.day-column.sealed .block-card:focus-within .block-stat-row,
+.day-column.sealed .block-card:focus-within .block-timer,
+.day-column.sealed .block-card.expanded .block-meta-row,
+.day-column.sealed .block-card.expanded .block-copy small,
+.day-column.sealed .block-card.expanded .block-stat-row,
+.day-column.sealed .block-card.expanded .block-timer {
+  max-height: 84px;
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  margin-top: 5px;
+  transform: translateY(0);
+}
+
+.day-column.sealed .block-card .drag-handle {
+  opacity: .12;
+  transition: opacity .18s ease;
+}
+
+.day-column.sealed .block-card:hover .drag-handle,
+.day-column.sealed .block-card:focus-within .drag-handle,
+.day-column.sealed .block-card.expanded .drag-handle {
+  opacity: .48;
+}
+
+.calendar-event-shell .block-card.time-card {
+  padding-bottom: 10px;
+}
+
+.calendar-event-shell .block-card.time-card .block-main {
+  grid-template-columns: 28px minmax(0, 1fr);
+}
+
+.calendar-event-shell .block-card.time-card .block-copy {
+  gap: 1px;
+}
+
+.calendar-event-shell .block-card.time-card:not(.expanded) .block-meta-row,
+.calendar-event-shell .block-card.time-card:not(.expanded) .block-copy small,
+.calendar-event-shell .block-card.time-card:not(.expanded) .block-stat-row,
+.calendar-event-shell .block-card.time-card:not(.expanded) .block-timer,
+.calendar-event-shell .block-card.time-card:not(.expanded) .system-badge,
+.calendar-event-shell .block-card.time-card:not(.expanded) .status-pill {
+  display: none !important;
+}
+
+.calendar-event-shell .block-card.time-card:not(.expanded) .block-title-row strong {
+  -webkit-line-clamp: 2;
+}
+
+@media (hover: none) {
+  .day-column.sealed .block-card .block-meta-row,
+  .day-column.sealed .block-card .block-copy small,
+  .day-column.sealed .block-card .block-stat-row,
+  .day-column.sealed .block-card .block-timer {
+    transition-duration: .12s;
+  }
+}
+
+:root[data-theme="light"] .day-column.sealed .block-card {
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.96), rgba(248,250,255,.9)),
+    rgba(255,255,255,.84);
+}

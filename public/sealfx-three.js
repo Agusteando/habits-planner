@@ -4,6 +4,7 @@ const TARGET_SELECTOR = ".day-column.sealed, .calendar-day-lane.sealed";
 const EFFECTS = new Map();
 const reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 const TAU = Math.PI * 2;
+const UP = new THREE.Vector3(0, 1, 0);
 
 function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
@@ -16,21 +17,33 @@ function seededPhase(el) {
   return (Math.abs(hash) % 6283) / 1000;
 }
 
-function makeWrapCurve({ phase = 0, turns = 2, verticalPhase = 0, radiusX = 0.82, radiusZ = 0.42, wobble = 0.12 } = {}) {
+function makeWrapCurve({
+  phase = 0,
+  turns = 2.4,
+  verticalPhase = 0,
+  radiusX = 0.84,
+  radiusZ = 0.46,
+  height = 2.92,
+  wobble = 0.1,
+  drift = 0.12
+} = {}) {
   const points = [];
-  const steps = 256;
+  const steps = 280;
   for (let i = 0; i < steps; i += 1) {
-    const u = (i / steps) * TAU;
-    const braided = phase + u * turns + Math.sin(u * 3 + phase) * wobble;
-    const radiusPulse = 1 + Math.sin(u * 4 + phase * 0.7) * 0.035;
-    const y = Math.sin(u + verticalPhase) * 1.33 + Math.sin(u * 2 - phase) * 0.07;
+    const u = i / (steps - 1);
+    const theta = phase + u * turns * TAU + Math.sin(u * TAU * 1.6 + phase) * wobble;
+    const wrapPulse = 1 + Math.sin(u * TAU * 2.4 + phase * 0.8) * 0.06;
+    const radiusXPulse = radiusX * wrapPulse * (1 + Math.cos(u * TAU * 0.9 + verticalPhase) * 0.03);
+    const radiusZPulse = radiusZ * wrapPulse * (1 + Math.sin(u * TAU * 1.2 + phase) * 0.04);
+    const yBase = (0.5 - u) * height;
+    const y = yBase + Math.sin(u * TAU * 2 + verticalPhase) * drift + Math.sin(u * TAU * 0.5 + phase) * 0.08;
     points.push(new THREE.Vector3(
-      Math.cos(braided) * radiusX * radiusPulse,
+      Math.cos(theta) * radiusXPulse,
       y,
-      Math.sin(braided) * radiusZ * radiusPulse
+      Math.sin(theta) * radiusZPulse
     ));
   }
-  return new THREE.CatmullRomCurve3(points, true, "catmullrom", 0.42);
+  return new THREE.CatmullRomCurve3(points, false, "catmullrom", 0.36);
 }
 
 function makeMaterial({ color, opacity, emissive, additive = true, phong = false }) {
@@ -46,20 +59,20 @@ function makeMaterial({ color, opacity, emissive, additive = true, phong = false
   return new THREE.MeshPhongMaterial({
     ...shared,
     emissive,
-    emissiveIntensity: 0.72,
+    emissiveIntensity: 0.78,
     specular: 0xfff8de,
-    shininess: 95
+    shininess: 110
   });
 }
 
-function buildHoop(y, radius, color, opacity) {
+function buildHoop(y, radius, color, opacity, tilt = 0) {
   const hoop = new THREE.Mesh(
-    new THREE.TorusGeometry(radius, 0.012, 8, 96),
+    new THREE.TorusGeometry(radius, 0.01, 8, 120),
     makeMaterial({ color, opacity })
   );
   hoop.position.y = y;
-  hoop.rotation.x = Math.PI * 0.5;
-  hoop.scale.z = 0.44;
+  hoop.rotation.x = Math.PI * 0.5 + tilt;
+  hoop.scale.set(1, 1, 0.52);
   return hoop;
 }
 
@@ -68,27 +81,30 @@ function buildStrand(effect, options) {
   const strand = new THREE.Group();
 
   const halo = new THREE.Mesh(
-    new THREE.TubeGeometry(curve, 256, options.haloRadius || 0.052, 10, true),
-    makeMaterial({ color: options.haloColor, opacity: options.haloOpacity || 0.075 })
+    new THREE.TubeGeometry(curve, 240, options.haloRadius || 0.042, 12, false),
+    makeMaterial({ color: options.haloColor, opacity: options.haloOpacity || 0.06 })
   );
   halo.renderOrder = 1;
   strand.add(halo);
 
   const core = new THREE.Mesh(
-    new THREE.TubeGeometry(curve, 256, options.coreRadius || 0.016, 8, true),
-    makeMaterial({ color: options.coreColor, emissive: options.emissiveColor, opacity: options.coreOpacity || 0.36, phong: true })
+    new THREE.TubeGeometry(curve, 240, options.coreRadius || 0.012, 10, false),
+    makeMaterial({ color: options.coreColor, emissive: options.emissiveColor, opacity: options.coreOpacity || 0.3, phong: true })
   );
   core.renderOrder = 2;
   strand.add(core);
 
-  const sparkCount = options.sparkCount || 18;
+  const sparkCount = options.sparkCount || 20;
   const sparks = [];
-  const sparkMaterialBase = makeMaterial({ color: options.sparkColor, opacity: 0.8 });
+  const sparkGeometry = new THREE.SphereGeometry(1, 10, 10);
   for (let i = 0; i < sparkCount; i += 1) {
-    const sphere = new THREE.Mesh(new THREE.SphereGeometry(1, 10, 10), sparkMaterialBase.clone());
-    sphere.renderOrder = 3;
-    strand.add(sphere);
-    sparks.push(sphere);
+    const spark = new THREE.Mesh(
+      sparkGeometry,
+      makeMaterial({ color: options.sparkColor, opacity: 0.78 })
+    );
+    spark.renderOrder = 3;
+    strand.add(spark);
+    sparks.push(spark);
   }
 
   effect.group.add(strand);
@@ -102,7 +118,7 @@ function buildEffect(el) {
   el.prepend(mount);
 
   const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true, powerPreference: "low-power" });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.75));
   renderer.setClearColor(0x000000, 0);
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.domElement.style.width = "100%";
@@ -110,19 +126,23 @@ function buildEffect(el) {
   mount.appendChild(renderer.domElement);
 
   const scene = new THREE.Scene();
-  const camera = new THREE.PerspectiveCamera(29, 1, 0.1, 30);
-  camera.position.set(0, 0, 6.1);
+  const camera = new THREE.PerspectiveCamera(34, 1, 0.1, 40);
+  camera.position.set(0.12, 0.0, 7.4);
 
   const group = new THREE.Group();
+  group.rotation.set(-0.18, 0, 0.05);
   scene.add(group);
 
-  scene.add(new THREE.AmbientLight(0xffffff, 0.54));
-  const key = new THREE.DirectionalLight(0xffedbd, 0.84);
-  key.position.set(2.8, 3.0, 5.0);
+  scene.add(new THREE.AmbientLight(0xffffff, 0.5));
+  const key = new THREE.DirectionalLight(0xfff0cb, 0.92);
+  key.position.set(3.2, 3.4, 4.8);
   scene.add(key);
-  const rim = new THREE.DirectionalLight(0x7cf4ff, 0.55);
-  rim.position.set(-3.2, -0.7, 3.5);
+  const rim = new THREE.DirectionalLight(0x6eeeff, 0.72);
+  rim.position.set(-3.6, 1.0, 5.6);
   scene.add(rim);
+  const back = new THREE.PointLight(0x63dfff, 0.75, 14);
+  back.position.set(0, -0.6, -3.2);
+  scene.add(back);
 
   const phase = seededPhase(el);
   const effect = {
@@ -136,84 +156,97 @@ function buildEffect(el) {
     width: 0,
     height: 0,
     dead: false,
-    paused: false,
     strands: [],
     hoops: []
   };
 
   buildStrand(effect, {
     phase,
-    turns: 2,
-    verticalPhase: 0,
-    radiusX: 0.86,
-    radiusZ: 0.44,
-    wobble: 0.14,
-    speed: 0.055,
-    offset: 0.0,
-    coreColor: 0xffe08a,
-    haloColor: 0x54eaff,
-    sparkColor: 0xfff5cd,
-    emissiveColor: 0x1bd7d4,
-    coreRadius: 0.018,
-    haloRadius: 0.064,
-    coreOpacity: 0.34,
-    haloOpacity: 0.08,
-    sparkCount: 22
-  });
-
-  buildStrand(effect, {
-    phase: phase + 1.8,
-    turns: 3,
-    verticalPhase: Math.PI * 0.38,
-    radiusX: 0.70,
-    radiusZ: 0.36,
-    wobble: 0.18,
-    speed: -0.042,
-    offset: 0.34,
-    coreColor: 0x85f7ff,
-    haloColor: 0xffd66b,
-    sparkColor: 0x94fbff,
-    emissiveColor: 0xffc65d,
-    coreRadius: 0.012,
-    haloRadius: 0.046,
-    coreOpacity: 0.26,
-    haloOpacity: 0.055,
-    sparkCount: 16
-  });
-
-  buildStrand(effect, {
-    phase: phase + 3.3,
-    turns: 1,
-    verticalPhase: Math.PI * 0.8,
+    turns: 2.55,
+    verticalPhase: phase * 0.45,
     radiusX: 0.94,
-    radiusZ: 0.48,
-    wobble: 0.09,
-    speed: 0.034,
+    radiusZ: 0.56,
+    height: 3.12,
+    wobble: 0.12,
+    drift: 0.14,
+    speed: 0.052,
+    offset: 0.03,
+    coreColor: 0xfff2ba,
+    haloColor: 0x67eaff,
+    sparkColor: 0xfffbdb,
+    emissiveColor: 0x2ce3e8,
+    coreRadius: 0.017,
+    haloRadius: 0.058,
+    coreOpacity: 0.34,
+    haloOpacity: 0.078,
+    sparkCount: 26
+  });
+
+  buildStrand(effect, {
+    phase: phase + 1.85,
+    turns: 3.15,
+    verticalPhase: Math.PI * 0.35,
+    radiusX: 0.76,
+    radiusZ: 0.42,
+    height: 2.88,
+    wobble: 0.16,
+    drift: 0.11,
+    speed: -0.043,
+    offset: 0.34,
+    coreColor: 0x7ff4ff,
+    haloColor: 0xffd46a,
+    sparkColor: 0x92f9ff,
+    emissiveColor: 0xffd06b,
+    coreRadius: 0.011,
+    haloRadius: 0.038,
+    coreOpacity: 0.25,
+    haloOpacity: 0.05,
+    sparkCount: 18
+  });
+
+  buildStrand(effect, {
+    phase: phase + 3.35,
+    turns: 2.05,
+    verticalPhase: Math.PI * 0.82,
+    radiusX: 1.04,
+    radiusZ: 0.62,
+    height: 3.0,
+    wobble: 0.08,
+    drift: 0.09,
+    speed: 0.028,
     offset: 0.58,
     coreColor: 0xffffff,
-    haloColor: 0x7adfff,
+    haloColor: 0x8adfff,
     sparkColor: 0xffffff,
-    emissiveColor: 0x7adfff,
-    coreRadius: 0.008,
-    haloRadius: 0.032,
-    coreOpacity: 0.18,
-    haloOpacity: 0.034,
-    sparkCount: 10
+    emissiveColor: 0x95ebff,
+    coreRadius: 0.007,
+    haloRadius: 0.026,
+    coreOpacity: 0.16,
+    haloOpacity: 0.028,
+    sparkCount: 12
   });
 
-  const topHoop = buildHoop(1.28, 0.79, 0xffd66b, 0.13);
-  const middleHoop = buildHoop(0, 0.93, 0x64f1ff, 0.07);
-  const bottomHoop = buildHoop(-1.28, 0.79, 0xffd66b, 0.10);
-  group.add(topHoop, middleHoop, bottomHoop);
-  effect.hoops.push(topHoop, middleHoop, bottomHoop);
+  const topHoop = buildHoop(1.3, 0.82, 0xffd871, 0.11, 0.06);
+  const midHoop = buildHoop(0.0, 1.02, 0x68efff, 0.06, -0.04);
+  const lowHoop = buildHoop(-1.3, 0.82, 0xffd871, 0.095, -0.07);
+  group.add(topHoop, midHoop, lowHoop);
+  effect.hoops.push(topHoop, midHoop, lowHoop);
 
   const aura = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.98, 0.98, 2.92, 48, 1, true),
-    makeMaterial({ color: 0x64eaff, opacity: 0.025 })
+    new THREE.CylinderGeometry(1.02, 1.02, 3.0, 48, 1, true),
+    makeMaterial({ color: 0x69e7ff, opacity: 0.02 })
   );
-  aura.scale.z = 0.42;
+  aura.scale.z = 0.55;
   group.add(aura);
   effect.aura = aura;
+
+  const innerGlow = new THREE.Mesh(
+    new THREE.SphereGeometry(0.84, 24, 20),
+    makeMaterial({ color: 0xffefb2, opacity: 0.028 })
+  );
+  innerGlow.scale.set(1.04, 1.55, 0.62);
+  group.add(innerGlow);
+  effect.innerGlow = innerGlow;
 
   resizeEffect(effect);
   EFFECTS.set(el, effect);
@@ -229,13 +262,13 @@ function resizeEffect(effect) {
   effect.height = height;
   effect.renderer.setSize(width, height, false);
   effect.camera.aspect = width / height;
-  effect.camera.position.z = effect.camera.aspect < 0.3 ? 6.9 : 6.1;
+  effect.camera.position.z = effect.camera.aspect < 0.34 ? 8.25 : effect.camera.aspect < 0.52 ? 7.85 : 7.35;
   effect.camera.updateProjectionMatrix();
 
   const aspect = width / Math.max(height, 1);
-  const xScale = clamp(aspect * 2.65, 0.42, 1.08);
-  const zScale = clamp(xScale * 0.92, 0.34, 1.0);
-  effect.group.scale.set(xScale, 1, zScale);
+  const xScale = clamp(aspect * 3.1, 0.54, 1.14);
+  const zScale = clamp(1.08 - aspect * 0.14, 0.78, 1.08);
+  effect.group.scale.set(xScale, 1.02, zScale);
 }
 
 function destroyEffect(el) {
@@ -277,15 +310,18 @@ function updateComet(strand, time, reduce) {
   for (let i = 0; i < count; i += 1) {
     const spark = strand.sparks[i];
     const fade = 1 - i / count;
-    const progress = ((base - i * 0.012) % 1 + 1) % 1;
+    const progress = ((base - i * 0.016) % 1 + 1) % 1;
     const point = strand.curve.getPointAt(progress);
+    const tangent = strand.curve.getTangentAt(progress).normalize();
     spark.position.copy(point);
+    spark.quaternion.setFromUnitVectors(UP, tangent);
 
-    const frontFactor = point.z > 0 ? 1 : 0.38;
-    const pulse = reduce ? 0.75 : 0.78 + Math.sin(time * 3.1 + i * 0.55 + strand.phase) * 0.12;
-    const size = (strand.coreRadius * 3.2 + 0.012) * Math.pow(fade, 0.75) * (point.z > 0 ? 1.18 : 0.84);
-    spark.scale.setScalar(size);
-    spark.material.opacity = clamp(fade * frontFactor * pulse, 0, 0.88);
+    const frontFactor = point.z > 0 ? 1 : 0.42;
+    const pulse = reduce ? 0.74 : 0.78 + Math.sin(time * 3.2 + i * 0.52 + strand.phase) * 0.12;
+    const size = (strand.coreRadius * 3.5 + 0.011) * Math.pow(fade, 0.7) * (point.z > 0 ? 1.18 : 0.86);
+    const stretch = i === 0 ? 2.7 : 1.5 + fade * 0.8;
+    spark.scale.set(size * 0.9, size * stretch, size * 0.9);
+    spark.material.opacity = clamp(fade * frontFactor * pulse * (i === 0 ? 1.15 : 1), 0, 0.9);
   }
 }
 
@@ -298,29 +334,36 @@ function animate(timeMs) {
     resizeEffect(effect);
 
     const slow = reduceMotion ? 0 : time;
-    effect.group.rotation.y = effect.phase * 0.2 + slow * 0.34;
-    effect.group.rotation.x = -0.08 + Math.sin(slow * 0.46 + effect.phase) * 0.045;
-    effect.group.rotation.z = Math.sin(slow * 0.31 + effect.phase) * 0.018;
+    effect.group.rotation.y = effect.phase * 0.18 + slow * 0.44;
+    effect.group.rotation.x = -0.16 + Math.sin(slow * 0.42 + effect.phase) * 0.052;
+    effect.group.rotation.z = 0.05 + Math.sin(slow * 0.28 + effect.phase) * 0.025;
 
     effect.strands.forEach((strand, index) => {
-      const wave = reduceMotion ? 0 : Math.sin(time * (0.8 + index * 0.17) + strand.phase);
-      strand.strand.rotation.y = slow * (0.05 + index * 0.035) * (index % 2 ? -1 : 1);
-      strand.core.material.opacity = clamp(strand.coreOpacity + wave * 0.035, 0.02, 0.52);
-      strand.halo.material.opacity = clamp(strand.haloOpacity + wave * 0.014, 0.01, 0.16);
+      const wave = reduceMotion ? 0 : Math.sin(time * (0.82 + index * 0.18) + strand.phase);
+      strand.strand.rotation.y = slow * (0.06 + index * 0.028) * (index % 2 ? -1 : 1);
+      strand.strand.rotation.z = Math.sin(slow * 0.44 + index + effect.phase) * 0.03;
+      strand.core.material.opacity = clamp(strand.coreOpacity + wave * 0.034, 0.02, 0.5);
+      strand.halo.material.opacity = clamp(strand.haloOpacity + wave * 0.014, 0.01, 0.15);
       if (strand.core.material.emissiveIntensity !== undefined) {
-        strand.core.material.emissiveIntensity = reduceMotion ? 0.35 : 0.65 + Math.max(0, wave) * 0.22;
+        strand.core.material.emissiveIntensity = reduceMotion ? 0.42 : 0.68 + Math.max(0, wave) * 0.24;
       }
       updateComet(strand, time, reduceMotion);
     });
 
     effect.hoops.forEach((hoop, index) => {
-      hoop.rotation.z = slow * (0.24 + index * 0.08) * (index === 1 ? -1 : 1);
-      hoop.material.opacity = reduceMotion ? 0.055 : 0.075 + Math.sin(time * 0.9 + index) * 0.025;
+      hoop.rotation.z = slow * (0.23 + index * 0.07) * (index === 1 ? -1 : 1);
+      hoop.rotation.x = Math.PI * 0.5 + Math.sin(slow * 0.32 + index) * 0.06;
+      hoop.material.opacity = reduceMotion ? 0.05 : clamp((index === 1 ? 0.05 : 0.085) + Math.sin(time * 0.9 + index) * 0.018, 0.025, 0.11);
     });
 
     if (effect.aura) {
-      effect.aura.material.opacity = reduceMotion ? 0.012 : 0.018 + Math.sin(time * 0.7 + effect.phase) * 0.006;
-      effect.aura.rotation.y = slow * -0.08;
+      effect.aura.material.opacity = reduceMotion ? 0.012 : 0.02 + Math.sin(time * 0.62 + effect.phase) * 0.007;
+      effect.aura.rotation.y = slow * -0.11;
+    }
+
+    if (effect.innerGlow) {
+      effect.innerGlow.material.opacity = reduceMotion ? 0.02 : 0.022 + Math.sin(time * 0.74 + effect.phase) * 0.006;
+      effect.innerGlow.rotation.y = slow * 0.06;
     }
 
     effect.renderer.render(effect.scene, effect.camera);
