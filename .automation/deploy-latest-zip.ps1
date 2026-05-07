@@ -1,26 +1,33 @@
 param(
     [string]$DownloadsPath = "C:\Users\hp\Downloads",
-    [string]$RepoPath = "",
+    [string]$RepoPath = "C:\Users\hp\habits-planner-2",
     [string]$ZipPath = "",
     [string]$Branch = "main",
 
-    # Set this if you want a stuck/manual dev server killed by port.
-    # Recommended only after you confirm your app's dev port.
     [int]$DevPort = 3000,
     [switch]$KillProcessUsingDevPort,
-
-    # Use this if you want npm ci instead of npm install when package-lock.json exists.
     [switch]$CleanInstall,
-
-    # Use this if you want deploy without pushing.
     [switch]$NoGitPush,
-
-    # Use this if you intentionally want to redeploy the same zip again.
     [switch]$Force
 )
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
+
+if ([string]::IsNullOrWhiteSpace($DownloadsPath)) {
+    $DownloadsPath = "C:\Users\hp\Downloads"
+}
+
+if ([string]::IsNullOrWhiteSpace($RepoPath)) {
+    $RepoPath = "C:\Users\hp\habits-planner-2"
+}
+
+if ([string]::IsNullOrWhiteSpace($Branch)) {
+    $Branch = "main"
+}
+
+$DownloadsPath = [System.IO.Path]::GetFullPath($DownloadsPath)
+$RepoPath = [System.IO.Path]::GetFullPath($RepoPath)
 
 $AutomationPath = Join-Path $RepoPath ".automation"
 $LogFile = Join-Path $AutomationPath "deploy.log"
@@ -29,9 +36,14 @@ $LastZipFile = Join-Path $AutomationPath "last-deployed-zip.txt"
 $VersionFile = Join-Path $AutomationPath "version.txt"
 $DevOutLog = Join-Path $AutomationPath "npm-dev.out.log"
 $DevErrLog = Join-Path $AutomationPath "npm-dev.err.log"
+$LockFile = Join-Path $AutomationPath "deploy.lock"
 
 function Ensure-Directory {
     param([string]$Path)
+
+    if ([string]::IsNullOrWhiteSpace($Path)) {
+        throw "Cannot create directory because path is empty."
+    }
 
     if (-not (Test-Path -LiteralPath $Path)) {
         New-Item -ItemType Directory -Path $Path -Force | Out-Null
@@ -57,22 +69,42 @@ function Invoke-CommandLogged {
     )
 
     Write-Log "RUN: $Command"
-    Push-Location $WorkingDirectory
+
+    $stdoutFile = Join-Path $env:TEMP ("deploy-stdout-" + [guid]::NewGuid().ToString("N") + ".log")
+    $stderrFile = Join-Path $env:TEMP ("deploy-stderr-" + [guid]::NewGuid().ToString("N") + ".log")
 
     try {
-        cmd.exe /d /s /c $Command 2>&1 | ForEach-Object {
-            Write-Host $_
-            Add-Content -LiteralPath $LogFile -Value $_
+        $process = Start-Process `
+            -FilePath "$env:ComSpec" `
+            -ArgumentList "/d /c $Command" `
+            -WorkingDirectory $WorkingDirectory `
+            -RedirectStandardOutput $stdoutFile `
+            -RedirectStandardError $stderrFile `
+            -NoNewWindow `
+            -Wait `
+            -PassThru
+
+        if (Test-Path -LiteralPath $stdoutFile) {
+            Get-Content -LiteralPath $stdoutFile -ErrorAction SilentlyContinue | ForEach-Object {
+                Write-Host $_
+                Add-Content -LiteralPath $LogFile -Value $_
+            }
         }
 
-        $exitCode = $LASTEXITCODE
+        if (Test-Path -LiteralPath $stderrFile) {
+            Get-Content -LiteralPath $stderrFile -ErrorAction SilentlyContinue | ForEach-Object {
+                Write-Host $_
+                Add-Content -LiteralPath $LogFile -Value $_
+            }
+        }
 
-        if ($exitCode -ne 0) {
-            throw "Command failed with exit code $exitCode`: $Command"
+        if ($process.ExitCode -ne 0) {
+            throw "Command failed with exit code $($process.ExitCode): $Command"
         }
     }
     finally {
-        Pop-Location
+        Remove-Item -LiteralPath $stdoutFile -Force -ErrorAction SilentlyContinue
+        Remove-Item -LiteralPath $stderrFile -Force -ErrorAction SilentlyContinue
     }
 }
 
@@ -105,6 +137,7 @@ function Wait-FileStable {
         $item = Get-Item -LiteralPath $Path
 
         $canOpen = $false
+
         try {
             $stream = [System.IO.File]::Open(
                 $item.FullName,
@@ -165,10 +198,12 @@ function Find-LatestZip {
 function Find-ProjectRootInExtractedZip {
     param([string]$ExtractedPath)
 
-    $packageFiles = Get-ChildItem -LiteralPath $ExtractedPath -Filter "package.json" -File -Recurse |
-        Where-Object {
-            $_.FullName -notmatch "\\node_modules\\"
-        }
+    $packageFiles = @(
+        Get-ChildItem -LiteralPath $ExtractedPath -Filter "package.json" -File -Recurse |
+            Where-Object {
+                $_.FullName -notmatch "\\node_modules\\"
+            }
+    )
 
     if ($packageFiles.Count -eq 0) {
         throw "Could not find package.json inside extracted zip."
@@ -201,7 +236,8 @@ function Stop-ManagedDevServer {
 
             if ($null -ne $process) {
                 Write-Log "Stopping managed npm dev process tree. PID: $oldPid"
-                cmd.exe /d /s /c "taskkill /PID $oldPid /T /F" 2>&1 | ForEach-Object {
+
+                & "$env:ComSpec" /d /c "taskkill /PID $oldPid /T /F" 2>&1 | ForEach-Object {
                     Write-Host $_
                     Add-Content -LiteralPath $LogFile -Value $_
                 }
@@ -252,7 +288,8 @@ function Stop-ProcessUsingPort {
 
         if ($safeNames -contains $proc.ProcessName.ToLowerInvariant()) {
             Write-Log "Killing process using port $Port. PID: $portPid Name: $($proc.ProcessName)"
-            cmd.exe /d /s /c "taskkill /PID $portPid /T /F" 2>&1 | ForEach-Object {
+
+            & "$env:ComSpec" /d /c "taskkill /PID $portPid /T /F" 2>&1 | ForEach-Object {
                 Write-Host $_
                 Add-Content -LiteralPath $LogFile -Value $_
             }
@@ -279,10 +316,9 @@ function Ensure-GitLocalExcludes {
         New-Item -ItemType File -Path $excludePath -Force | Out-Null
     }
 
-    $existing = Get-Content -LiteralPath $excludePath -ErrorAction SilentlyContinue
+    $existing = @(Get-Content -LiteralPath $excludePath -ErrorAction SilentlyContinue)
 
     $entries = @(
-        "",
         "# Local automation excludes",
         "node_modules/",
         ".automation/",
@@ -292,10 +328,6 @@ function Ensure-GitLocalExcludes {
     )
 
     foreach ($entry in $entries) {
-        if ($entry -eq "") {
-            continue
-        }
-
         if ($existing -notcontains $entry) {
             Add-Content -LiteralPath $excludePath -Value $entry
         }
@@ -327,11 +359,13 @@ function Invoke-RobocopyMirror {
         ".env.staging"
     )
 
-    $existingEnvFiles = Get-ChildItem -LiteralPath $DestinationRoot -Force -File -ErrorAction SilentlyContinue |
-        Where-Object {
-            $_.Name -like ".env*" -and $_.Name -ne ".env.example"
-        } |
-        Select-Object -ExpandProperty Name
+    $existingEnvFiles = @(
+        Get-ChildItem -LiteralPath $DestinationRoot -Force -File -ErrorAction SilentlyContinue |
+            Where-Object {
+                $_.Name -like ".env*" -and $_.Name -ne ".env.example"
+            } |
+            Select-Object -ExpandProperty Name
+    )
 
     foreach ($envFile in $existingEnvFiles) {
         if ($excludedFiles -notcontains $envFile) {
@@ -370,7 +404,6 @@ function Invoke-RobocopyMirror {
 
     $exitCode = $LASTEXITCODE
 
-    # Robocopy uses 0-7 as success or partial-success codes.
     if ($exitCode -ge 8) {
         throw "Robocopy failed with exit code $exitCode."
     }
@@ -411,25 +444,36 @@ function Get-NextVersionNumber {
 function Commit-And-Push {
     Ensure-GitLocalExcludes
 
+    Write-Log "Checking Git status."
     Invoke-CommandLogged -Command "git status --short" -WorkingDirectory $RepoPath
 
+    Write-Log "Staging repo changes, excluding .automation from deployment commit."
+
+    Invoke-CommandLogged -Command "git add -A -- ." -WorkingDirectory $RepoPath
+    Invoke-CommandLogged -Command "git reset -q -- .automation" -WorkingDirectory $RepoPath
+
     Push-Location $RepoPath
+
     try {
-        $status = git status --porcelain
+        git diff --cached --quiet
+        $diffExitCode = $LASTEXITCODE
     }
     finally {
         Pop-Location
     }
 
-    if ([string]::IsNullOrWhiteSpace(($status -join "`n"))) {
-        Write-Log "No Git changes detected. Skipping commit and push."
+    if ($diffExitCode -eq 0) {
+        Write-Log "No deployable Git changes detected after excluding .automation. Skipping commit and push."
         return
+    }
+
+    if ($diffExitCode -ne 1) {
+        throw "Could not determine staged Git diff. git diff --cached --quiet exit code: $diffExitCode"
     }
 
     $version = Get-NextVersionNumber
     $message = "version $version"
 
-    Invoke-CommandLogged -Command "git add -A -- ." -WorkingDirectory $RepoPath
     Invoke-CommandLogged -Command "git commit -m `"$message`"" -WorkingDirectory $RepoPath
 
     if ($NoGitPush) {
@@ -441,92 +485,163 @@ function Commit-And-Push {
 }
 
 function Start-DevServer {
-    Write-Log "Starting npm run dev."
+    Write-Log "Starting npm run dev as detached hidden process."
 
     if (Test-Path -LiteralPath $DevOutLog) {
         Clear-Content -LiteralPath $DevOutLog -ErrorAction SilentlyContinue
+    }
+    else {
+        New-Item -ItemType File -Path $DevOutLog -Force | Out-Null
     }
 
     if (Test-Path -LiteralPath $DevErrLog) {
         Clear-Content -LiteralPath $DevErrLog -ErrorAction SilentlyContinue
     }
+    else {
+        New-Item -ItemType File -Path $DevErrLog -Force | Out-Null
+    }
+
+    $cmdArgs = "/d /c npm run dev 1>>`"$DevOutLog`" 2>>`"$DevErrLog`""
 
     $process = Start-Process `
-        -FilePath "cmd.exe" `
-        -ArgumentList "/d /s /c `"npm run dev`"" `
+        -FilePath "$env:ComSpec" `
+        -ArgumentList $cmdArgs `
         -WorkingDirectory $RepoPath `
-        -RedirectStandardOutput $DevOutLog `
-        -RedirectStandardError $DevErrLog `
-        -WindowStyle Minimized `
+        -WindowStyle Hidden `
         -PassThru
 
     Set-Content -LiteralPath $PidFile -Value $process.Id
 
-    Write-Log "npm run dev started. Managed PID: $($process.Id)"
+    Start-Sleep -Seconds 2
+
+    $check = Get-Process -Id $process.Id -ErrorAction SilentlyContinue
+
+    if ($null -eq $check) {
+        Write-Log "npm run dev process exited quickly. Check stderr log: $DevErrLog"
+    }
+    else {
+        Write-Log "npm run dev started. Managed PID: $($process.Id)"
+    }
+
     Write-Log "Dev stdout log: $DevOutLog"
     Write-Log "Dev stderr log: $DevErrLog"
+}
+
+function Acquire-DeployLock {
+    Ensure-Directory $AutomationPath
+
+    try {
+        $stream = [System.IO.File]::Open(
+            $LockFile,
+            [System.IO.FileMode]::OpenOrCreate,
+            [System.IO.FileAccess]::ReadWrite,
+            [System.IO.FileShare]::None
+        )
+
+        $writer = New-Object System.IO.StreamWriter($stream)
+        $writer.WriteLine("PID=$PID")
+        $writer.WriteLine("Started=$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')")
+        $writer.Flush()
+
+        return @{
+            Stream = $stream
+            Writer = $writer
+        }
+    }
+    catch {
+        throw "Another deploy appears to be running. Lock file: $LockFile"
+    }
+}
+
+function Release-DeployLock {
+    param($Lock)
+
+    if ($null -ne $Lock) {
+        if ($null -ne $Lock.Writer) {
+            $Lock.Writer.Dispose()
+        }
+
+        if ($null -ne $Lock.Stream) {
+            $Lock.Stream.Dispose()
+        }
+    }
+
+    Remove-Item -LiteralPath $LockFile -Force -ErrorAction SilentlyContinue
 }
 
 function Main {
     Ensure-Directory $AutomationPath
 
-    Write-Log "================ DEPLOY START ================"
-    Write-Log "Repo path: $RepoPath"
-    Write-Log "Downloads path: $DownloadsPath"
-
-    if (-not (Test-Path -LiteralPath $RepoPath)) {
-        throw "Repo path does not exist: $RepoPath"
-    }
-
-    if ([string]::IsNullOrWhiteSpace($ZipPath)) {
-        $ZipPath = Find-LatestZip -Path $DownloadsPath
-    }
-
-    if (-not (Test-Path -LiteralPath $ZipPath)) {
-        throw "Zip path does not exist: $ZipPath"
-    }
-
-    Write-Log "Selected zip: $ZipPath"
-
-    Wait-FileStable -Path $ZipPath
-
-    $fingerprint = Get-ZipFingerprint -Path $ZipPath
-
-    if (-not $Force -and (Test-Path -LiteralPath $LastZipFile)) {
-        $lastFingerprint = Get-Content -LiteralPath $LastZipFile -ErrorAction SilentlyContinue | Select-Object -First 1
-
-        if ($lastFingerprint -eq $fingerprint) {
-            Write-Log "This exact zip was already deployed. Use -Force to redeploy it."
-            Write-Log "================ DEPLOY SKIPPED ================"
-            return
-        }
-    }
-
-    $stagingRoot = Join-Path $env:TEMP ("habits-planner-deploy-" + [guid]::NewGuid().ToString("N"))
+    $lock = $null
 
     try {
-        Ensure-Directory $stagingRoot
+        $lock = Acquire-DeployLock
 
-        Write-Log "Extracting zip to staging folder: $stagingRoot"
-        Expand-Archive -LiteralPath $ZipPath -DestinationPath $stagingRoot -Force
+        Write-Log "================ DEPLOY START ================"
+        Write-Log "Repo path: $RepoPath"
+        Write-Log "Downloads path: $DownloadsPath"
 
-        $sourceRoot = Find-ProjectRootInExtractedZip -ExtractedPath $stagingRoot
+        if (-not (Test-Path -LiteralPath $RepoPath)) {
+            throw "Repo path does not exist: $RepoPath"
+        }
 
-        Stop-ManagedDevServer
-        Stop-ProcessUsingPort -Port $DevPort
+        if ([string]::IsNullOrWhiteSpace($ZipPath)) {
+            $ZipPath = Find-LatestZip -Path $DownloadsPath
+        }
 
-        Invoke-RobocopyMirror -SourceRoot $sourceRoot -DestinationRoot $RepoPath
+        $ZipPath = [System.IO.Path]::GetFullPath($ZipPath)
 
-        Install-Dependencies
+        if (-not (Test-Path -LiteralPath $ZipPath)) {
+            throw "Zip path does not exist: $ZipPath"
+        }
 
-        Commit-And-Push
+        Write-Log "Selected zip: $ZipPath"
 
-        Start-DevServer
+        Wait-FileStable -Path $ZipPath
 
-        Set-Content -LiteralPath $LastZipFile -Value $fingerprint
+        $fingerprint = Get-ZipFingerprint -Path $ZipPath
 
-        Write-Log "Deployment complete."
-        Write-Log "================ DEPLOY END ================"
+        if (-not $Force -and (Test-Path -LiteralPath $LastZipFile)) {
+            $lastFingerprint = Get-Content -LiteralPath $LastZipFile -ErrorAction SilentlyContinue | Select-Object -First 1
+
+            if ($lastFingerprint -eq $fingerprint) {
+                Write-Log "This exact zip was already deployed. Use -Force to redeploy it."
+                Write-Log "================ DEPLOY SKIPPED ================"
+                return
+            }
+        }
+
+        $stagingRoot = Join-Path $env:TEMP ("habits-planner-deploy-" + [guid]::NewGuid().ToString("N"))
+
+        try {
+            Ensure-Directory $stagingRoot
+
+            Write-Log "Extracting zip to staging folder: $stagingRoot"
+            Expand-Archive -LiteralPath $ZipPath -DestinationPath $stagingRoot -Force
+
+            $sourceRoot = Find-ProjectRootInExtractedZip -ExtractedPath $stagingRoot
+
+            Stop-ManagedDevServer
+            Stop-ProcessUsingPort -Port $DevPort
+
+            Invoke-RobocopyMirror -SourceRoot $sourceRoot -DestinationRoot $RepoPath
+
+            Install-Dependencies
+
+            Commit-And-Push
+
+            Start-DevServer
+
+            Set-Content -LiteralPath $LastZipFile -Value $fingerprint
+
+            Write-Log "Deployment complete."
+            Write-Log "================ DEPLOY END ================"
+        }
+        finally {
+            if (Test-Path -LiteralPath $stagingRoot) {
+                Remove-Item -LiteralPath $stagingRoot -Recurse -Force -ErrorAction SilentlyContinue
+            }
+        }
     }
     catch {
         Write-Log "DEPLOY FAILED: $($_.Exception.Message)"
@@ -534,9 +649,7 @@ function Main {
         throw
     }
     finally {
-        if (Test-Path -LiteralPath $stagingRoot) {
-            Remove-Item -LiteralPath $stagingRoot -Recurse -Force -ErrorAction SilentlyContinue
-        }
+        Release-DeployLock -Lock $lock
     }
 }
 

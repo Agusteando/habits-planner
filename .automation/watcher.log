@@ -1,1 +1,15 @@
-\.automation\watcher.log
+\.automation\watcher.log[2026-05-06 17:26:37] ================ WATCHER START ================
+[2026-05-06 17:26:37] Watching downloads path: C:\Users\hp\Downloads
+[2026-05-06 17:26:37] Repo path: C:\Users\hp\habits-planner-2
+[2026-05-06 17:26:37] Deploy script: C:\Users\hp\habits-planner-2\.automation\deploy-latest-zip.ps1
+[2026-05-06 17:26:37] Startup baseline zip recorded, not deploying existing file: C:\Users\hp\Downloads\habit-planner-frontend-v40 (2).zip
+[2026-05-06 17:26:37] Watcher is running. Leave this PowerShell window open.
+[2026-05-06 17:26:45] Candidate zip detected: C:\Users\hp\Downloads\habit-planner-frontend-v40 (3).zip
+[2026-05-06 17:26:47] Starting deploy for: C:\Users\hp\Downloads\habit-planner-frontend-v40 (3).zip
+[2026-05-06 17:26:59] Deploy failed for: C:\Users\hp\Downloads\habit-planner-frontend-v40 (3).zip
+[2026-05-06 17:26:59] Error: Command failed with exit code 1: git push origin main
+[2026-05-06 17:45:02] Candidate zip detected: C:\Users\hp\Downloads\habit-planner-v41-clean.zip
+[2026-05-06 17:45:05] Starting deploy for: C:\Users\hp\Downloads\habit-planner-v41-clean.zip
+[2026-05-06 17:45:17] Deploy failed for: C:\Users\hp\Downloads\habit-planner-v41-clean.zip
+[2026-05-06 17:45:17] Error: Command failed with exit code 1: git push origin main
+[2026-05-06 20:14:17] ================ WATCHER STOP ================

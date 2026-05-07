@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import ReactDOM from "react-dom/client";
 import { createPortal } from "react-dom";
 import "./styles.css";
+import { ICON_GRID, iconSprites, visualAssets, type SpriteSpec } from "./assets/assetManifest";
 
 type DayKey = "mon" | "tue" | "wed" | "thu" | "fri" | "sat" | "sun";
 type TimeBand = "05-07" | "07-09" | "09-11" | "11-13" | "13-15" | "15-17" | "17-19" | "19-21";
@@ -26,6 +27,39 @@ type BankFile = { schemaVersion: number; kind: "habit-action-bank"; exportedAt: 
 type PlanFile = State & { exportedAt: string };
 type ParticleBurst = { id: string; x: number; y: number; mode: "done" | "auto" | "level" };
 type XpFloat = { id: string; x: number; y: number; xp: number; levelUp?: number };
+
+const appAssetVars = {
+  "--asset-brand-mark": `url(${visualAssets.brandMark})`,
+  "--asset-panel-dark": `url(${visualAssets.surfaces.panelDark})`,
+  "--asset-panel-light": `url(${visualAssets.surfaces.panelLight})`,
+  "--asset-ambient-mist": `url(${visualAssets.surfaces.ambientMist})`,
+  "--asset-border-metal": `url(${visualAssets.surfaces.borderMetal})`,
+  "--asset-icon-sprite": `url(${visualAssets.iconSprite})`,
+  "--asset-effects-sprite": `url(${visualAssets.effectsSprite})`,
+  "--asset-panel-ornament": `url(${visualAssets.panelOrnament})`,
+} as React.CSSProperties & Record<string, string>;
+
+const categorySprites = iconSprites.category as Record<Category, SpriteSpec>;
+const kindSprites = iconSprites.kind as Record<Kind | "custom", SpriteSpec>;
+const statusSprites = iconSprites.status as Record<Status | "sealed", SpriteSpec>;
+
+function spriteStyle(spec: SpriteSpec): React.CSSProperties {
+  const x = ICON_GRID.columns <= 1 ? 0 : (spec.x / (ICON_GRID.columns - 1)) * 100;
+  const y = ICON_GRID.rows <= 1 ? 0 : (spec.y / (ICON_GRID.rows - 1)) * 100;
+  return { "--sprite-x": `${x}%`, "--sprite-y": `${y}%` } as React.CSSProperties;
+}
+
+function SpriteIcon({ spec, className = "" }: { spec: SpriteSpec; className?: string }) {
+  return <span className={`sprite-icon ${className}`} style={spriteStyle(spec)} aria-hidden="true" />;
+}
+
+function taskSprite(t: Task) {
+  return categorySprites[t.category] || kindSprites[t.kind] || kindSprites.custom;
+}
+
+function statusSprite(status: Status) {
+  return statusSprites[status] || statusSprites.planned;
+}
 
 const STORAGE_KEY = "habit-planner-rpg-v28";
 const LEGACY_STORAGE_KEYS = ["habit-planner-rpg-v26","habit-planner-rpg-v25","habit-planner-rpg-v24","habit-planner-rpg-v23","habit-planner-rpg-v22","habit-planner-rpg-v21","habit-planner-rpg-v20","habit-planner-rpg-v19","habit-planner-rpg-v18","habit-planner-rpg-v17","habit-planner-rpg-v16","habit-planner-rpg-v15","habit-planner-rpg-v14","habit-planner-rpg-v13","habit-planner-rpg-v12","habit-planner-rpg-v11"];
@@ -247,13 +281,13 @@ function App(){
     const close=()=>{setExpanded(null); setPopover(null);};
     const openPopover=(el:HTMLElement)=>{const rect=el.getBoundingClientRect(); const width=Math.min(380, Math.max(300, window.innerWidth*0.28)); const gap=14; const rightSide=rect.right+gap; const leftSide=rect.left-gap-width; const left=rightSide+width<=window.innerWidth-14?rightSide:leftSide>=14?leftSide:Math.max(12,Math.min(window.innerWidth-width-12,rect.left)); const estimatedHeight=260; const top=Math.max(12, Math.min(rect.top-8, window.innerHeight-estimatedHeight-12)); setPopover({blockId:b.id, top, left, width}); setExpanded(b.id);};
     const action=(name:"tier"|"done"|"missed"|"remove"|"pause"|"review")=>{blockAction(b.id,name); close();};
-    return <article key={b.id} data-block-id={b.id} data-block-root data-drop-block={b.id} className={`block-card ${timeMode?"time-card":""} ${t.kind} ${t.accent} ${b.status} ${open?"expanded":""} ${reviewLive?"review-live":""} ${beamHit?"beam-hit":""}`} onClick={e=>{e.stopPropagation(); const el=e.currentTarget as HTMLElement; if(open) close(); else openPopover(el);}}>
+    return <article key={b.id} data-block-id={b.id} data-block-root data-drop-block={b.id} data-kind={t.kind} data-category={t.category} data-status={b.status} data-accent={t.accent} className={`block-card ${timeMode?"time-card":""} ${t.kind} ${t.accent} ${b.status} ${open?"expanded":""} ${reviewLive?"review-live":""} ${beamHit?"beam-hit":""}`} onClick={e=>{e.stopPropagation(); const el=e.currentTarget as HTMLElement; if(open) close(); else openPopover(el);}}>
       <button className="drag-handle" onPointerDown={e=>startDrag(e,{type:"block",blockId:b.id,x:e.clientX,y:e.clientY})}>⋮⋮</button>
       <i className={`block-accent ${t.kind}`}/>
       <div className="block-main">
-        <div className="block-icon">{t.icon}</div>
+        <div className="block-icon"><SpriteIcon spec={taskSprite(t)} className="task-sprite"/></div>
         <div className="block-copy">
-          <div className="block-meta-row"><span className={`kind-pill ${t.kind}`}>{kindLabel}</span>{isSystemTask(t)&&<span className="system-badge">System</span>}<span className={`status-pill ${b.status}`}>{reviewLive?"Review active":status}</span></div>
+          <div className="block-meta-row"><span className={`kind-pill ${t.kind}`}>{kindLabel}</span>{isSystemTask(t)&&<span className="system-badge">System</span>}<span className={`status-pill ${b.status}`}><SpriteIcon spec={statusSprite(b.status)} className="pill-icon"/>{reviewLive?"Review active":status}</span></div>
           <div className="block-title-row"><strong>{t.title}</strong></div>
           <small>{timeMode && timeMeta ? `${formatMinutes(timeMeta.start)}–${formatMinutes(timeMeta.end)} · ${timeMeta.duration}m` : `${tier.label} · ${tier.minutes?`${tier.minutes}m`:"No timer"}`}</small>
         </div>
@@ -291,19 +325,19 @@ function App(){
   }
   const dragTask=drag?.type==="task"?state.tasks[drag.taskId]:drag?.type==="block"?state.tasks[state.blocks.find(b=>b.id===drag.blockId)?.taskId||""]:undefined;
   const gateReady=state.week.mode==="reviewPending"&&!!state.week.emergencyReviewUnlockAt&&new Date(state.week.emergencyReviewUnlockAt).getTime()<=Date.now();
-  return <main className="app-shell">
+  return <main className="app-shell" style={appAssetVars}>
     <header className="topbar glass-panel">
       <div className="topbar-start">
         <button className="brand" onClick={()=>setState(s=>({...s,activeView:"plan"}))}>
-          <span className="brand-mark">◆</span>
+          <span className="brand-mark" aria-hidden="true"><img src={visualAssets.brandMark} alt=""/></span>
           <span className="brand-copy"><strong>Habit Planner</strong></span>
         </button>
       </div>
       <div className="top-status">
         <span className="top-chip level-chip">LV {playerProgress.level}</span>
         <span className="xp-status"><b>{compactNumber(playerProgress.xp)} XP</b><i><em style={{width:`${playerProgress.progress*100}%`}}/></i><small>{playerProgress.level>=RS_MAX_LEVEL?"Max level":"to "+(playerProgress.level+1)}</small></span>
-        <span className="top-chip token-chip">◈ {state.player.tokens}</span>
-        <span className={`top-chip streak ${state.player.streakState}`}>✦ {state.player.streakDays}d</span>
+        <span className="top-chip token-chip"><SpriteIcon spec={iconSprites.core.token} className="top-icon"/>◈ {state.player.tokens}</span>
+        <span className={`top-chip streak ${state.player.streakState}`}><SpriteIcon spec={iconSprites.core.streak} className="top-icon"/>✦ {state.player.streakDays}d</span>
         <span className={`top-chip mode ${state.week.mode}`}>{state.week.mode==="reviewOpen"?`Review ${countdown(state.week.reviewOpenUntil)}`:state.week.mode==="reviewPending"?`Gate ${countdown(state.week.emergencyReviewUnlockAt)}`:state.week.mode==="sealed"?"Sealed":"Draft"}</span>
       </div>
       <div className="top-actions">
@@ -322,15 +356,41 @@ function App(){
       </div>
       <input ref={planImport} className="file-input" type="file" accept="application/json,.json" onChange={e=>importPlan(e.target.files?.[0])}/>
     </header>
-    <section className={`workspace ${state.activeView==="plan"?"plan-workspace":"single-workspace"}`}>{state.activeView==="plan"&&<><aside className="action-bank glass-panel"><div className="bank-head"><strong>Action Bank</strong><button onClick={()=>setBankMenu(!bankMenu)}>Options</button></div><label className="bank-search"><span>⌕</span><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search actions"/></label><div className="chip-row">{(["All","Body","Food","Focus","Dopa","Recovery","System"] as const).map(c=><button key={c} className={chip===c?"active":""} onClick={()=>setChip(c)}>{c}</button>)}</div>{bankMenu&&<div className="bank-tools"><button onClick={exportBank}>Export bank</button><button onClick={()=>bankImport.current?.click()}>Import bank</button><button onClick={exportTemplate}>Template</button></div>}<button className="add-action-toggle" onClick={()=>setShowAdd(!showAdd)}>{showAdd?"Close":"+ New action"}</button>{showAdd&&<div className="add-action"><input value={newTitle} onChange={e=>setNewTitle(e.target.value)} placeholder="Action name"/><div>{(["discipline","reward","recovery","review","pause"] as Kind[]).map(k=><button key={k} className={newKind===k?"active":""} onClick={()=>setNewKind(k)}>{k}</button>)}</div><button onClick={addCustom}>Add action</button></div>}<div className="bank-strip">{filteredTasks.map(t=><div key={t.id} className={`bank-card ${t.kind} ${t.accent}`} onPointerDown={e=>startDrag(e,{type:"task",taskId:t.id,x:e.clientX,y:e.clientY})}><span className="bank-icon">{t.icon}</span><span className="bank-copy"><strong>{t.title}</strong><small>{t.kind==="reward"?`${t.tokenCost} tokens`:t.kind}</small></span>{isSystemTask(t)?<span className="bank-lock" title="Protected system action">◆</span>:<button className="bank-remove bank-x" aria-label={`Delete ${t.title}`} title="Delete from Action Bank" onPointerDown={e=>e.stopPropagation()} onClick={e=>{e.stopPropagation();removeBankAction(t.id);}}>×</button>}</div>)}{!filteredTasks.length&&<div className="bank-empty">No actions found.</div>}</div><input ref={bankImport} className="file-input" type="file" accept="application/json,.json" onChange={e=>importBank(e.target.files?.[0])}/></aside><section className="week-panel glass-panel"><div className="week-head"><div><h1>Week</h1><p>{state.week.mode==="reviewOpen"?"Review window open. Edit, then reseal.":"Drag actions into days. Seal one day or the full week when it feels stable."}</p></div><div className="week-controls">
+    <section className={`workspace ${state.activeView==="plan"?"plan-workspace":"single-workspace"}`}>
+      {state.activeView==="plan"&&<>
+        <aside className="action-bank glass-panel">
+          <div className="bank-head"><strong>Action Bank</strong><button onClick={()=>setBankMenu(!bankMenu)}>Options</button></div>
+          <label className="bank-search"><span>⌕</span><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search actions"/></label>
+          <div className="chip-row">{(["All","Body","Food","Focus","Dopa","Recovery","System"] as const).map(c=><button key={c} className={chip===c?"active":""} onClick={()=>setChip(c)}>{c}</button>)}</div>
+          {bankMenu&&<div className="bank-tools"><button onClick={exportBank}>Export bank</button><button onClick={()=>bankImport.current?.click()}>Import bank</button><button onClick={exportTemplate}>Template</button></div>}
+          <button className="add-action-toggle" onClick={()=>setShowAdd(!showAdd)}>{showAdd?"Close":"+ New action"}</button>
+          {showAdd&&<div className="add-action"><input value={newTitle} onChange={e=>setNewTitle(e.target.value)} placeholder="Action name"/><div>{(["discipline","reward","recovery","review","pause"] as Kind[]).map(k=><button key={k} className={newKind===k?"active":""} onClick={()=>setNewKind(k)}>{k}</button>)}</div><button onClick={addCustom}>Add action</button></div>}
+          <div className="bank-strip">{filteredTasks.map(t=><div key={t.id} data-kind={t.kind} data-category={t.category} data-accent={t.accent} className={`bank-card ${t.kind} ${t.accent}`} onPointerDown={e=>startDrag(e,{type:"task",taskId:t.id,x:e.clientX,y:e.clientY})}><span className="bank-icon"><SpriteIcon spec={taskSprite(t)}/></span><span className="bank-copy"><strong>{t.title}</strong><small>{t.kind==="reward"?`${t.tokenCost} tokens`:t.kind}</small></span>{isSystemTask(t)?<span className="bank-lock" title="Protected system action"><SpriteIcon spec={iconSprites.core.mark} className="lock-icon"/></span>:<button className="bank-remove bank-x" aria-label={`Delete ${t.title}`} title="Delete from Action Bank" onPointerDown={e=>e.stopPropagation()} onClick={e=>{e.stopPropagation();removeBankAction(t.id);}}>×</button>}</div>)}{!filteredTasks.length&&<div className="bank-empty">No actions found.</div>}</div>
+          <input ref={bankImport} className="file-input" type="file" accept="application/json,.json" onChange={e=>importBank(e.target.files?.[0])}/>
+        </aside>
+        <section className="week-panel glass-panel">
+          <div className="week-head"><div><h1>Week</h1><p>{state.week.mode==="reviewOpen"?"Review window open. Edit, then reseal.":"Drag actions into days. Seal one day or the full week when it feels stable."}</p></div><div className="week-controls">
   <div className="week-nav-cluster"><button aria-label="Previous week" onClick={()=>setState(s=>({...s,weekStartIso:addDays(new Date(s.weekStartIso),-7).toISOString()}))}>←</button><strong title={weekLabel(state.weekStartIso)}>{weekLabel(state.weekStartIso)}</strong><button aria-label="Next week" onClick={()=>setState(s=>({...s,weekStartIso:addDays(new Date(s.weekStartIso),7).toISOString()}))}>→</button></div>
   <div className="week-action-cluster"><button onClick={()=>setState(s=>({...s,weekStartIso:startOfWeekIso()}))}>Today</button><button className={state.hidePastDays?"active":""} onClick={()=>setState(s=>({...s,hidePastDays:!s.hidePastDays}))}>Hide past</button></div>
   <div className="view-cluster"><button className={state.planningView==="blocks"?"active":""} onClick={()=>setState(s=>({...s,planningView:"blocks"}))}>Blocks</button><button className={state.planningView==="time"?"active":""} onClick={()=>setState(s=>({...s,planningView:"time"}))}>Time</button></div>
   {state.planningView==="time"&&<div className="time-filter-cluster">{(["morning","afternoon","both"] as TimeFilter[]).map(f=><button key={f} className={state.timeFilter===f?"active":""} onClick={()=>setState(s=>({...s,timeFilter:f}))}>{f}</button>)}</div>}
 </div><div className={`equilibrium ${r.status}`}><div><span className="eq-dot"/><strong>{r.status==="balanced"?"Balanced":r.status==="thinIce"?"Thin ice":"Red zone"}</strong><small>{r.netTension}</small></div><span className="eq-track"><i style={{width:`${Math.max(4,Math.min(100,45+r.netTension))}%`}}/></span>{r.sealDisabledReason&&<p>{r.sealDisabledReason}</p>}</div></div><div className="week-scroll">{state.planningView==="blocks"?<div className="week-row">{visibleDays.map(day=>renderDay(day))}</div>:renderTimeView()}</div></section></>}{state.activeView==="today"&&<Today state={state} blockAction={blockAction}/>}</section>
-    <nav className="bottom-nav">{(["plan","today"] as const).map(v=><button key={v} className={state.activeView===v?"active":""} onClick={()=>setState(s=>({...s,activeView:v}))}>{v[0].toUpperCase()+v.slice(1)}</button>)}</nav>{state.toast&&<div className="toast glass-panel">{state.toast}</div>}{drag&&dragTask&&<div className="drag-overlay" style={{left:drag.x,top:drag.y}}><div className={`mini-card ${dragTask.accent}`}><span>{dragTask.icon}</span><strong>{dragTask.title}</strong></div></div>}{bursts.map(b=><div key={b.id} className={`completion-burst ${b.mode}`} style={{left:b.x,top:b.y}}>{Array.from({length:b.mode==="level"?22:14},(_,i)=><span key={i} style={{["--i" as any]:i} as React.CSSProperties}/> )}</div>)}{xpFloats.map(f=><div key={f.id} className={`xp-float ${f.levelUp?"level-up":""}`} style={{left:f.x,top:f.y}}><strong>+{f.xp} XP</strong>{f.levelUp&&<span>LEVEL {f.levelUp}</span>}</div>)}
+    <nav className="bottom-nav">{(["plan","today"] as const).map(v=><button key={v} className={state.activeView===v?"active":""} onClick={()=>setState(s=>({...s,activeView:v}))}>{v[0].toUpperCase()+v.slice(1)}</button>)}</nav>
+    {state.toast&&<div className="toast glass-panel">{state.toast}</div>}
+    {drag&&dragTask&&<div className="drag-overlay" style={{left:drag.x,top:drag.y}}><div className={`mini-card ${dragTask.accent}`}><span><SpriteIcon spec={taskSprite(dragTask)}/></span><strong>{dragTask.title}</strong></div></div>}
+    {bursts.map(b=><div key={b.id} className={`completion-burst ${b.mode}`} style={{left:b.x,top:b.y}}>{Array.from({length:b.mode==="level"?22:14},(_,i)=><span key={i} style={{["--i" as any]:i} as React.CSSProperties}/> )}</div>)}
+    {xpFloats.map(f=><div key={f.id} className={`xp-float ${f.levelUp?"level-up":""}`} style={{left:f.x,top:f.y}}><strong>+{f.xp} XP</strong>{f.levelUp&&<span>LEVEL {f.levelUp}</span>}</div>)}
   </main>;
 }
-function Today({state,blockAction}:{state:State;blockAction:(id:string,a:"tier"|"done"|"missed"|"remove"|"pause"|"review")=>void}){const blocks=dayBlocks(state.blocks,state.selectedDay); const current=blocks.find(b=>b.status==="planned"||b.status==="recoveryDue"); return <section className="today-panel glass-panel"><div className="today-head"><div className="today-ring"><span>{blocks.length?Math.round(blocks.filter(b=>b.status==="done"||b.status==="paused").length/blocks.length*100):0}%</span></div><div><h1>Today</h1><p>Assumed complete unless you report otherwise.</p></div></div>{current&&state.tasks[current.taskId]?<article className="today-current"><strong>{state.tasks[current.taskId].title}</strong><button onClick={()=>blockAction(current.id,"done")}>Done</button><button onClick={()=>blockAction(current.id,"missed")}>Missed</button></article>:<div className="quiet-empty">No active exception.</div>}<div className="today-queue">{blocks.map(b=>{const t=state.tasks[b.taskId]; return t?<div className={`queue-line ${b.status}`} key={b.id}><span>{t.icon}</span><strong>{t.title}</strong><small>{b.status}</small></div>:null;})}</div></section>}
+function Today({state,blockAction}:{state:State;blockAction:(id:string,a:"tier"|"done"|"missed"|"remove"|"pause"|"review")=>void}){
+  const blocks=dayBlocks(state.blocks,state.selectedDay);
+  const current=blocks.find(b=>b.status==="planned"||b.status==="recoveryDue");
+  const currentTask=current?state.tasks[current.taskId]:undefined;
+  return <section className="today-panel glass-panel">
+    <div className="today-head"><div className="today-ring"><span>{blocks.length?Math.round(blocks.filter(b=>b.status==="done"||b.status==="paused").length/blocks.length*100):0}%</span></div><div><h1>Today</h1><p>Assumed complete unless you report otherwise.</p></div></div>
+    {current&&currentTask?<article className="today-current" data-kind={currentTask.kind} data-category={currentTask.category}><span className="today-current-icon"><SpriteIcon spec={taskSprite(currentTask)}/></span><strong>{currentTask.title}</strong><button onClick={()=>blockAction(current.id,"done")}>Done</button><button onClick={()=>blockAction(current.id,"missed")}>Missed</button></article>:<div className="quiet-empty">No active exception.</div>}
+    <div className="today-queue">{blocks.map(b=>{const t=state.tasks[b.taskId]; return t?<div className={`queue-line ${b.status}`} data-status={b.status} data-kind={t.kind} key={b.id}><span><SpriteIcon spec={taskSprite(t)}/></span><strong>{t.title}</strong><small>{b.status}</small></div>:null;})}</div>
+  </section>;
+}
 class ErrorBoundary extends React.Component<{children:React.ReactNode},{error?:Error}>{state:{error?:Error}={}; static getDerivedStateFromError(error:Error){return{error};} render(){if(this.state.error)return <main className="fallback-screen"><section className="fallback-card"><h1>Planner could not start.</h1><p>{this.state.error.message}</p><button onClick={()=>{for(const k of Object.keys(localStorage))if(k.startsWith("habit-planner-rpg"))localStorage.removeItem(k); location.reload();}}>Reset local plan</button></section></main>; return this.props.children;}}
 ReactDOM.createRoot(document.getElementById("root")!).render(<React.StrictMode><ErrorBoundary><App/></ErrorBoundary></React.StrictMode>);

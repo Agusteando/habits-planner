@@ -1,20 +1,30 @@
 param(
     [string]$DownloadsPath = "C:\Users\hp\Downloads",
-    [string]$RepoPath = "",
+    [string]$RepoPath = "C:\Users\hp\habits-planner-2",
     [string]$Branch = "main",
 
-    # Change this if your app uses another dev port.
     [int]$DevPort = 3000,
-
-    # Enables rescue cleanup for manually-started/stuck dev servers.
     [switch]$KillProcessUsingDevPort,
-
-    # Polling backup in case FileSystemWatcher misses an event.
     [int]$PollSeconds = 5
 )
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
+
+if ([string]::IsNullOrWhiteSpace($DownloadsPath)) {
+    $DownloadsPath = "C:\Users\hp\Downloads"
+}
+
+if ([string]::IsNullOrWhiteSpace($RepoPath)) {
+    $RepoPath = "C:\Users\hp\habits-planner-2"
+}
+
+if ([string]::IsNullOrWhiteSpace($Branch)) {
+    $Branch = "main"
+}
+
+$DownloadsPath = [System.IO.Path]::GetFullPath($DownloadsPath)
+$RepoPath = [System.IO.Path]::GetFullPath($RepoPath)
 
 $AutomationPath = Join-Path $RepoPath ".automation"
 $DeployScript = Join-Path $AutomationPath "deploy-latest-zip.ps1"
@@ -22,6 +32,10 @@ $WatcherLog = Join-Path $AutomationPath "watcher.log"
 
 function Ensure-Directory {
     param([string]$Path)
+
+    if ([string]::IsNullOrWhiteSpace($Path)) {
+        throw "Cannot create directory because path is empty."
+    }
 
     if (-not (Test-Path -LiteralPath $Path)) {
         New-Item -ItemType Directory -Path $Path -Force | Out-Null
@@ -42,6 +56,10 @@ function Write-WatcherLog {
 
 function Get-ZipFingerprint {
     param([string]$Path)
+
+    if ([string]::IsNullOrWhiteSpace($Path)) {
+        return ""
+    }
 
     if (-not (Test-Path -LiteralPath $Path)) {
         return ""
@@ -113,7 +131,12 @@ function Wait-FileStable {
 function Invoke-Deploy {
     param([string]$ZipPath)
 
+    if ([string]::IsNullOrWhiteSpace($ZipPath)) {
+        return
+    }
+
     if (-not (Test-Path -LiteralPath $ZipPath)) {
+        Write-WatcherLog "Zip no longer exists. Skipping: $ZipPath"
         return
     }
 
@@ -121,43 +144,49 @@ function Invoke-Deploy {
         return
     }
 
-    Write-WatcherLog "Candidate zip detected: $ZipPath"
+    $resolvedZipPath = (Get-Item -LiteralPath $ZipPath).FullName
 
-    $stable = Wait-FileStable -Path $ZipPath
+    Write-WatcherLog "Candidate zip detected: $resolvedZipPath"
+
+    $stable = Wait-FileStable -Path $resolvedZipPath
 
     if (-not $stable) {
-        Write-WatcherLog "Zip did not stabilize in time. Skipping for now: $ZipPath"
+        Write-WatcherLog "Zip did not stabilize in time. Skipping for now: $resolvedZipPath"
         return
     }
 
-    $args = @(
-        "-ExecutionPolicy", "Bypass",
-        "-File", $DeployScript,
-        "-DownloadsPath", $DownloadsPath,
-        "-RepoPath", $RepoPath,
-        "-ZipPath", $ZipPath,
-        "-Branch", $Branch,
-        "-DevPort", $DevPort
-    )
+    Write-WatcherLog "Starting deploy for: $resolvedZipPath"
 
-    if ($KillProcessUsingDevPort) {
-        $args += "-KillProcessUsingDevPort"
+    try {
+        if ($KillProcessUsingDevPort) {
+            & $DeployScript `
+                -DownloadsPath $DownloadsPath `
+                -RepoPath $RepoPath `
+                -ZipPath $resolvedZipPath `
+                -Branch $Branch `
+                -DevPort $DevPort `
+                -KillProcessUsingDevPort 2>&1 | ForEach-Object {
+                    Write-Host $_
+                    Add-Content -LiteralPath $WatcherLog -Value $_
+                }
+        }
+        else {
+            & $DeployScript `
+                -DownloadsPath $DownloadsPath `
+                -RepoPath $RepoPath `
+                -ZipPath $resolvedZipPath `
+                -Branch $Branch `
+                -DevPort $DevPort 2>&1 | ForEach-Object {
+                    Write-Host $_
+                    Add-Content -LiteralPath $WatcherLog -Value $_
+                }
+        }
+
+        Write-WatcherLog "Deploy finished successfully for: $resolvedZipPath"
     }
-
-    Write-WatcherLog "Starting deploy for: $ZipPath"
-
-    $process = Start-Process `
-        -FilePath "powershell.exe" `
-        -ArgumentList $args `
-        -Wait `
-        -PassThru `
-        -NoNewWindow
-
-    if ($process.ExitCode -eq 0) {
-        Write-WatcherLog "Deploy finished successfully for: $ZipPath"
-    }
-    else {
-        Write-WatcherLog "Deploy failed with exit code $($process.ExitCode) for: $ZipPath"
+    catch {
+        Write-WatcherLog "Deploy failed for: $resolvedZipPath"
+        Write-WatcherLog "Error: $($_.Exception.Message)"
     }
 }
 
@@ -169,6 +198,22 @@ function Get-LatestZip {
     return Get-ChildItem -LiteralPath $DownloadsPath -Filter "*.zip" -File |
         Sort-Object LastWriteTime -Descending |
         Select-Object -First 1
+}
+
+function Drain-PendingEvents {
+    while ($true) {
+        $pending = Get-Event -ErrorAction SilentlyContinue | Where-Object {
+            $_.SourceIdentifier -in @("ZipCreated", "ZipRenamed", "ZipChanged")
+        }
+
+        if ($null -eq $pending -or @($pending).Count -eq 0) {
+            break
+        }
+
+        foreach ($event in @($pending)) {
+            Remove-Event -EventIdentifier $event.EventIdentifier -ErrorAction SilentlyContinue
+        }
+    }
 }
 
 function Main {
@@ -189,6 +234,18 @@ function Main {
 
     $lastSeenFingerprint = ""
 
+    $existingLatest = Get-LatestZip
+
+    if ($null -ne $existingLatest) {
+        $lastSeenFingerprint = Get-ZipFingerprint -Path $existingLatest.FullName
+        Write-WatcherLog "Startup baseline zip recorded, not deploying existing file: $($existingLatest.FullName)"
+    }
+    else {
+        Write-WatcherLog "No existing zip found at startup."
+    }
+
+    Drain-PendingEvents
+
     $watcher = New-Object System.IO.FileSystemWatcher
     $watcher.Path = $DownloadsPath
     $watcher.Filter = "*.zip"
@@ -206,7 +263,15 @@ function Main {
             $event = Wait-Event -Timeout $PollSeconds
 
             if ($null -ne $event) {
-                $path = $event.SourceEventArgs.FullPath
+                $path = $null
+
+                try {
+                    $path = $event.SourceEventArgs.FullPath
+                }
+                catch {
+                    $path = $null
+                }
+
                 Remove-Event -EventIdentifier $event.EventIdentifier -ErrorAction SilentlyContinue
 
                 if ($path -and $path.ToLowerInvariant().EndsWith(".zip")) {
@@ -219,8 +284,6 @@ function Main {
                 }
             }
 
-            # Poll backup. This catches cases where the download completed through rename
-            # or the filesystem event was missed.
             $latest = Get-LatestZip
 
             if ($null -ne $latest) {
