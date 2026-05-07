@@ -977,3 +977,149 @@
     linear-gradient(180deg, rgba(255,255,255,.98), rgba(246,249,252,.90)),
     rgba(255,255,255,.82);
 }
+
+/* Patch v12: aggressively declutter block cards. */
+.block-card,
+.calendar-event-shell .block-card.time-card,
+.day-column.sealed .block-card,
+.calendar-day-lane.sealed .block-card.time-card {
+  overflow: hidden;
+}
+
+.block-card {
+  min-height: 68px;
+  padding: 10px 10px 10px 14px;
+  gap: 0;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, .08), rgba(255, 255, 255, .02)),
+    rgba(7, 10, 11, .90);
+}
+
+.block-card::before {
+  inset: 10px auto 10px 0;
+  width: 2px;
+  box-shadow: 0 0 10px rgba(117, 244, 255, .20);
+}
+
+.block-card::after {
+  opacity: .04;
+}
+
+.drag-handle,
+.calendar-event-shell .drag-handle,
+.day-column.sealed .block-card .drag-handle {
+  display: none !important;
+}
+
+.block-main,
+.day-column.sealed .block-main {
+  grid-template-columns: 38px minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+}
+
+.block-icon,
+.day-column.sealed .block-icon {
+  width: 38px;
+  height: 38px;
+}
+
+.block-icon .sprite-icon {
+  width: 30px;
+  height: 30px;
+}
+
+.block-copy,
+.day-column.sealed .block-copy {
+  gap: 0;
+  align-content: center;
+}
+
+.block-title-row strong,
+.day-column.sealed .block-title-row strong,
+.calendar-day-lane.sealed .block-title-row strong {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.14;
+  font-size: 14px;
+}
+
+.block-copy small,
+.block-meta-row,
+.block-stat-row,
+.block-timer,
+.kind-pill,
+.system-badge,
+.status-pill,
+.block-stat-row span,
+.calendar-event-shell .block-copy small,
+.calendar-event-shell .block-meta-row,
+.calendar-event-shell .block-stat-row,
+.calendar-event-shell .block-timer,
+.calendar-event-shell .kind-pill,
+.calendar-event-shell .system-badge,
+.calendar-event-shell .status-pill,
+.day-column.sealed .block-meta-row,
+.day-column.sealed .block-copy small,
+.day-column.sealed .block-stat-row,
+.day-column.sealed .block-timer {
+  display: none !important;
+}
+
+.calendar-event-shell .block-card.time-card,
+.calendar-day-lane.sealed .block-card.time-card {
+  min-height: 46px;
+  padding: 7px 8px 7px 10px;
+  gap: 0;
+}
+
+.calendar-event-shell .block-main,
+.calendar-day-lane.sealed .block-card.time-card .block-main {
+  grid-template-columns: 28px minmax(0, 1fr);
+  gap: 8px;
+  align-items: center;
+}
+
+.calendar-event-shell .block-icon,
+.calendar-day-lane.sealed .block-card.time-card .block-icon {
+  width: 28px;
+  height: 28px;
+}
+
+.calendar-event-shell .block-icon .sprite-icon {
+  width: 22px;
+  height: 22px;
+}
+
+.calendar-event-shell .block-copy {
+  gap: 0;
+}
+
+.calendar-event-shell .block-title-row strong {
+  font-size: 11.5px;
+  line-height: 1.12;
+  -webkit-line-clamp: 2;
+}
+
+.block-card.expanded .block-copy small,
+.block-card:focus-within .block-copy small,
+.block-card:hover .block-copy small {
+  display: block !important;
+  margin-top: 4px;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.calendar-event-shell .block-card.time-card.expanded .block-copy small,
+.calendar-event-shell .block-card.time-card:focus-within .block-copy small,
+.calendar-event-shell .block-card.time-card:hover .block-copy small {
+  display: block !important;
+  margin-top: 3px;
+  font-size: 10px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
