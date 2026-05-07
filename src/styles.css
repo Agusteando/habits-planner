@@ -2440,3 +2440,24 @@ button:disabled {
     width: 100%;
   }
 }
+
+/* Fix: keep the top-right overflow menu visible outside the header panel. */
+.topbar.glass-panel {
+  overflow: visible;
+}
+
+.top-utility {
+  position: relative;
+}
+
+@media (max-width: 760px) {
+  .top-actions,
+  .top-utility {
+    overflow: visible;
+    flex-wrap: wrap;
+  }
+
+  .pop-menu {
+    max-width: calc(100vw - 24px);
+  }
+}
