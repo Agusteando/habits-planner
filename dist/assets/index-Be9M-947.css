@@ -505,3 +505,51 @@
 .calendar-day-head-card.day-head small {
   font-size: 11px;
 }
+
+/* Patch v6: raised spatial Three.js seal overlay. */
+.day-column.sealed,
+.calendar-day-lane.sealed {
+  isolation: isolate;
+  perspective: 900px;
+}
+
+.day-column > *,
+.calendar-day-lane > * {
+  position: relative;
+  z-index: 3;
+}
+
+.day-column > .seal-threefx,
+.calendar-day-lane > .seal-threefx {
+  position: absolute;
+  inset: -16px -18px;
+  z-index: 2;
+  pointer-events: none;
+  overflow: visible;
+  opacity: .98;
+  mix-blend-mode: screen;
+}
+
+.calendar-day-lane > .seal-threefx {
+  inset: -22px -24px;
+}
+
+.day-column > .seal-threefx canvas,
+.calendar-day-lane > .seal-threefx canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  filter: saturate(1.16) contrast(1.05) blur(.08px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .day-column > .seal-threefx,
+  .calendar-day-lane > .seal-threefx {
+    opacity: .6;
+  }
+}
+
+:root[data-theme="light"] .day-column > .seal-threefx,
+:root[data-theme="light"] .calendar-day-lane > .seal-threefx {
+  opacity: .86;
+}
