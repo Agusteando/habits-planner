@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import ReactDOM from "react-dom/client";
 import { createPortal } from "react-dom";
 import "./styles.css";
-import { ICON_GRID, ITEM_GRID, iconSprites, itemSprites, visualAssets, type SpriteSpec } from "./assets/assetManifest";
+import { defaultItemIconId, iconSprites, itemIconIds, itemIconPool, itemSprites, spriteGrids, taskIconIds, visualAssets, type ItemIconId, type SpriteSpec, type SpriteSheet } from "./assets/assetManifest";
 
 type DayKey = "mon" | "tue" | "wed" | "thu" | "fri" | "sat" | "sun";
 type TimeBand = "05-07" | "07-09" | "09-11" | "11-13" | "13-15" | "15-17" | "17-19" | "19-21";
@@ -15,14 +15,14 @@ type Status = "planned" | "done" | "missed" | "paused" | "recoveryDue";
 type Mode = "draft" | "sealed" | "reviewPending" | "reviewOpen";
 
 type Tier = { level: 1 | 2 | 3; label: string; minutes: number; xp: number; tension: number; relief: number };
-type Task = { id: string; title: string; icon: string; kind: Kind; category: Category; tokenCost: number; tokenEarn: number; accent: Accent; tiers: Tier[] };
+type Task = { id: string; title: string; icon: string; iconSpriteId?: ItemIconId | string; kind: Kind; category: Category; tokenCost: number; tokenEarn: number; accent: Accent; tiers: Tier[] };
 type Block = { id: string; taskId: string; day: DayKey; order: number; tier: 1 | 2 | 3; status: Status; createdAt: string; timeBand?: TimeBand; timeStart?: number; timeMinutes?: number; reviewUnlockAt?: string; reviewOpenedAt?: string; pauseAppliedAt?: string; injected?: boolean };
 type DaySeal = { sealedAt: string };
 type Player = { level: number; xp: number; tokens: number; streakDays: number; streakState: "healthy" | "fractured"; resetCount: number };
 type Week = { mode: Mode; sealedAt?: string; reviewOpenUntil?: string; emergencyReviewRequestedAt?: string; emergencyReviewUnlockAt?: string; daySeals: Partial<Record<DayKey, DaySeal>> };
 type Theme = "dark" | "light";
 type AppView = "plan" | "today";
-type State = { schemaVersion: 28; activeView: AppView; tasks: Record<string, Task>; deletedTaskIds: string[]; blocks: Block[]; player: Player; week: Week; selectedDay: DayKey; weekStartIso: string; hidePastDays: boolean; planningView: PlanningView; timeFilter: TimeFilter; theme: Theme; audioMuted: boolean; toast?: string };
+type State = { schemaVersion: 29; activeView: AppView; tasks: Record<string, Task>; deletedTaskIds: string[]; blocks: Block[]; player: Player; week: Week; selectedDay: DayKey; weekStartIso: string; hidePastDays: boolean; planningView: PlanningView; timeFilter: TimeFilter; theme: Theme; audioMuted: boolean; toast?: string };
 type BankFile = { schemaVersion: number; kind: "habit-action-bank"; exportedAt: string; tasks: Record<string, Task> };
 type PlanFile = State & { exportedAt: string };
 type ParticleBurst = { id: string; x: number; y: number; mode: "done" | "auto" | "level" };
@@ -36,6 +36,8 @@ const appAssetVars = {
   "--asset-icon-sprite": `url(${visualAssets.iconSprite})`,
   "--asset-item-sprite": `url(${visualAssets.itemSprite})`,
   "--asset-effects-sprite": `url(${visualAssets.effectsSprite})`,
+  "--asset-ornaments-sprite": `url(${visualAssets.ornamentsSprite})`,
+  "--asset-planner-mark": `url(${visualAssets.plannerMark})`,
 } as React.CSSProperties & Record<string, string>;
 
 const categorySprites = iconSprites.category as Record<Category, SpriteSpec>;
@@ -45,27 +47,51 @@ const itemTaskSprites = itemSprites.task as Record<string, SpriteSpec>;
 const itemCategorySprites = itemSprites.category as Record<Category, SpriteSpec>;
 const itemKindSprites = itemSprites.kind as Record<Kind | "custom", SpriteSpec>;
 
+function validItemIconId(value?: string): ItemIconId | undefined {
+  return value && value in itemIconPool ? value as ItemIconId : undefined;
+}
+
+function iconHash(seed: string) {
+  let hash = 2166136261;
+  for (let i = 0; i < seed.length; i++) {
+    hash ^= seed.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+  return hash >>> 0;
+}
+
+function fallbackItemIconId(seed: string): ItemIconId {
+  return itemIconIds[iconHash(seed) % itemIconIds.length] || defaultItemIconId;
+}
+
+function randomItemIconId(): ItemIconId {
+  return itemIconIds[Math.floor(Math.random() * itemIconIds.length)] || defaultItemIconId;
+}
+
 function spriteStyle(spec: SpriteSpec): React.CSSProperties {
-  const grid = spec.sheet === "items" ? ITEM_GRID : ICON_GRID;
+  const sheet: SpriteSheet = spec.sheet || "icons";
+  const grid = spriteGrids[sheet];
   const x = grid.columns <= 1 ? 0 : (spec.x / (grid.columns - 1)) * 100;
   const y = grid.rows <= 1 ? 0 : (spec.y / (grid.rows - 1)) * 100;
   return { "--sprite-x": `${x}%`, "--sprite-y": `${y}%` } as React.CSSProperties;
 }
 
 function SpriteIcon({ spec, className = "" }: { spec: SpriteSpec; className?: string }) {
-  return <span className={`sprite-icon ${spec.sheet === "items" ? "item-sprite" : ""} ${className}`} style={spriteStyle(spec)} aria-hidden="true" />;
+  const sheet = spec.sheet || "icons";
+  return <span className={`sprite-icon sprite-${sheet} ${sheet === "items" ? "item-sprite" : ""} ${className}`} style={spriteStyle(spec)} aria-hidden="true" />;
 }
 
 function taskSprite(t: Task) {
-  return itemTaskSprites[t.id] || itemCategorySprites[t.category] || itemKindSprites[t.kind] || categorySprites[t.category] || kindSprites[t.kind] || kindSprites.custom;
+  const iconId = validItemIconId(t.iconSpriteId) || taskIconIds[t.id as keyof typeof taskIconIds] || fallbackItemIconId(`${t.kind}:${t.category}:${t.id}:${t.title}`);
+  return itemIconPool[iconId] || itemTaskSprites[t.id] || itemCategorySprites[t.category] || itemKindSprites[t.kind] || categorySprites[t.category] || kindSprites[t.kind] || kindSprites.custom;
 }
 
 function statusSprite(status: Status) {
   return statusSprites[status] || statusSprites.planned;
 }
 
-const STORAGE_KEY = "habit-planner-rpg-v28";
-const LEGACY_STORAGE_KEYS = ["habit-planner-rpg-v26","habit-planner-rpg-v25","habit-planner-rpg-v24","habit-planner-rpg-v23","habit-planner-rpg-v22","habit-planner-rpg-v21","habit-planner-rpg-v20","habit-planner-rpg-v19","habit-planner-rpg-v18","habit-planner-rpg-v17","habit-planner-rpg-v16","habit-planner-rpg-v15","habit-planner-rpg-v14","habit-planner-rpg-v13","habit-planner-rpg-v12","habit-planner-rpg-v11"];
+const STORAGE_KEY = "habit-planner-rpg-v29";
+const LEGACY_STORAGE_KEYS = ["habit-planner-rpg-v28","habit-planner-rpg-v26","habit-planner-rpg-v25","habit-planner-rpg-v24","habit-planner-rpg-v23","habit-planner-rpg-v22","habit-planner-rpg-v21","habit-planner-rpg-v20","habit-planner-rpg-v19","habit-planner-rpg-v18","habit-planner-rpg-v17","habit-planner-rpg-v16","habit-planner-rpg-v15","habit-planner-rpg-v14","habit-planner-rpg-v13","habit-planner-rpg-v12","habit-planner-rpg-v11"];
 const DAYS: DayKey[] = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
 const REVIEW_DELAY = 24 * 60 * 60 * 1000;
 const REVIEW_WINDOW = 12 * 60 * 60 * 1000;
@@ -276,9 +302,11 @@ function isDopamineTask(t:Pick<Task,"kind"|"category">){return t.kind==="reward"
 function normalizeTask(t:Task):Task {
   const category=normalizeCategory(t.category,t.kind);
   const dopamine=t.kind==="reward"||category==="Dopamine";
+  const iconSpriteId=validItemIconId(t.iconSpriteId)||validItemIconId(t.icon)||taskIconIds[t.id as keyof typeof taskIconIds]||fallbackItemIconId(`${t.kind}:${category}:${t.id}:${t.title}`);
   return {
     ...t,
     icon:t.icon||"sprite",
+    iconSpriteId,
     category,
     accent:t.accent||categoryAccent(category),
     tokenEarn:dopamine?0:Math.max(0,Math.floor(t.tokenEarn||0)),
@@ -302,8 +330,8 @@ function blockTiming(t:Task,b:Block,week:Week,weekStartIso:string,reviewLive:boo
   if(b.status==="recoveryDue")return{label:"Recovery due",detail:"Streak waiting",progress:100,tone:"recovery"};
   return null;
 }
-function baseState(toast?:string, resetCount=0):State{const player=normalizePlayer({level:5,xp:1400,tokens:4,streakDays:12,streakState:"healthy",resetCount}); return{schemaVersion:28,activeView:"plan",tasks:{...tasksSeed},deletedTaskIds:[],blocks:[],player,week:{mode:"draft",daySeals:{}},selectedDay:"mon",weekStartIso:startOfWeekIso(),hidePastDays:false,planningView:"blocks",timeFilter:"both",theme:"dark",audioMuted:false,toast};}
-function loadState():State{try{let raw=localStorage.getItem(STORAGE_KEY); if(!raw){for(const key of LEGACY_STORAGE_KEYS){raw=localStorage.getItem(key); if(raw)break;}} if(!raw)return baseState(); const p=JSON.parse(raw); if(!p||typeof p!=="object")return baseState(); const deletedTaskIds:string[]=Array.isArray(p.deletedTaskIds)?p.deletedTaskIds.filter((id:any):id is string=>typeof id==="string"):[]; const tasks=mergeTaskBank(p.tasks); deletedTaskIds.forEach(id=>{if(tasks[id]&&!isSystemTask(tasks[id])&&!PINNED_SEED_TASK_IDS.has(id)) delete tasks[id];}); return {...baseState(),...p,schemaVersion:28,activeView:p.activeView==="today"?"today":"plan",tasks,deletedTaskIds,blocks:normalize((p.blocks||[]).filter((b:Block)=>!!tasks[b.taskId])),player:normalizePlayer({...baseState().player,...(p.player||{}),resetCount:p.player?.resetCount||0}),week:{mode:p.week?.mode||"draft",sealedAt:p.week?.sealedAt,reviewOpenUntil:p.week?.reviewOpenUntil,emergencyReviewRequestedAt:p.week?.emergencyReviewRequestedAt,emergencyReviewUnlockAt:p.week?.emergencyReviewUnlockAt,daySeals:p.week?.daySeals||{}},weekStartIso:p.weekStartIso||startOfWeekIso(),hidePastDays:!!p.hidePastDays,planningView:p.planningView==="time"?"time":"blocks",timeFilter:p.timeFilter==="morning"||p.timeFilter==="afternoon"?p.timeFilter:"both",theme:p.theme==="light"?"light":"dark",audioMuted:!!p.audioMuted};}catch{return baseState("Stored plan reset.");}}
+function baseState(toast?:string, resetCount=0):State{const player=normalizePlayer({level:5,xp:1400,tokens:4,streakDays:12,streakState:"healthy",resetCount}); return{schemaVersion:29,activeView:"plan",tasks:{...tasksSeed},deletedTaskIds:[],blocks:[],player,week:{mode:"draft",daySeals:{}},selectedDay:"mon",weekStartIso:startOfWeekIso(),hidePastDays:false,planningView:"blocks",timeFilter:"both",theme:"dark",audioMuted:false,toast};}
+function loadState():State{try{let raw=localStorage.getItem(STORAGE_KEY); if(!raw){for(const key of LEGACY_STORAGE_KEYS){raw=localStorage.getItem(key); if(raw)break;}} if(!raw)return baseState(); const p=JSON.parse(raw); if(!p||typeof p!=="object")return baseState(); const deletedTaskIds:string[]=Array.isArray(p.deletedTaskIds)?p.deletedTaskIds.filter((id:any):id is string=>typeof id==="string"):[]; const tasks=mergeTaskBank(p.tasks); deletedTaskIds.forEach(id=>{if(tasks[id]&&!isSystemTask(tasks[id])&&!PINNED_SEED_TASK_IDS.has(id)) delete tasks[id];}); return {...baseState(),...p,schemaVersion:29,activeView:p.activeView==="today"?"today":"plan",tasks,deletedTaskIds,blocks:normalize((p.blocks||[]).filter((b:Block)=>!!tasks[b.taskId])),player:normalizePlayer({...baseState().player,...(p.player||{}),resetCount:p.player?.resetCount||0}),week:{mode:p.week?.mode||"draft",sealedAt:p.week?.sealedAt,reviewOpenUntil:p.week?.reviewOpenUntil,emergencyReviewRequestedAt:p.week?.emergencyReviewRequestedAt,emergencyReviewUnlockAt:p.week?.emergencyReviewUnlockAt,daySeals:p.week?.daySeals||{}},weekStartIso:p.weekStartIso||startOfWeekIso(),hidePastDays:!!p.hidePastDays,planningView:p.planningView==="time"?"time":"blocks",timeFilter:p.timeFilter==="morning"||p.timeFilter==="afternoon"?p.timeFilter:"both",theme:p.theme==="light"?"light":"dark",audioMuted:!!p.audioMuted};}catch{return baseState("Stored plan reset.");}}
 function report(blocks:Block[],tasks:Record<string,Task>){let tension=0,relief=0,tokenDelta=0; for(const b of blocks){if(b.status==="missed"||b.status==="paused")continue; const t=tasks[b.taskId]; if(!t)continue; const tier=getTier(t,b.tier); tension+=tier.tension; relief+=tier.relief; tokenDelta+=tokenDeltaForTask(t);} const netTension=tension-relief; const status=netTension>=RED_ZONE?"redZone":netTension>=THIN_ICE?"thinIce":"balanced"; return{tension,relief,tokenDelta,netTension,status,sealDisabledReason: status==="redZone"?"Add relief before sealing.":tokenDelta<0?"Rewards exceed earned tokens.":undefined};}
 function canSeal(r:ReturnType<typeof report>, week:Week){return (week.mode==="draft"||week.mode==="reviewOpen")&&r.status!=="redZone"&&r.tokenDelta>=0;}
 function canEditGlobal(week:Week){return week.mode==="draft"|| (week.mode==="reviewOpen" && !!week.reviewOpenUntil && Date.now()<new Date(week.reviewOpenUntil).getTime());}
@@ -351,13 +379,13 @@ function ensureReviewBlock(s:State, day:DayKey, unlockAt?:string){return s.block
 function isSystemTask(t?:Task){return !!t&&SYSTEM_TASK_IDS.has(t.id);}
 function makeBlock(t:Task,day:DayKey,order:number,reviewUnlockAt?:string,timeBand?:TimeBand,timeStart?:number):Block{const tier=t.tiers.find(x=>x.level===(t.kind==="reward"?2:1))||t.tiers[0]; const review=t.kind==="review"; const start=review?(typeof timeStart==="number"?timeStart:REVIEW_DEFAULT_START):timeStart; return{id:uid("block"),taskId:t.id,day,order,tier:t.kind==="reward"?2:1,status:"planned",createdAt:new Date().toISOString(),timeBand:review?undefined:timeBand,timeStart:start,timeMinutes:review?REVIEW_WINDOW_MINUTES:Math.max(MIN_EVENT_MINUTES,tier.minutes||30),reviewUnlockAt:undefined};}
 function insertBlock(blocks:Block[],incoming:Block,target:{day:DayKey;beforeBlockId?:string}){if(!target.beforeBlockId)return normalize([...blocks,{...incoming,day:target.day,order:nextOrder(blocks,target.day)}]); const rest=blocks.filter(b=>b.day!==target.day), xs=dayBlocks(blocks,target.day), out:Block[]=[]; let done=false; for(const b of xs){if(b.id===target.beforeBlockId){out.push({...incoming,day:target.day,order:b.order-.5}); done=true;} out.push(b);} if(!done)out.push({...incoming,day:target.day,order:nextOrder(blocks,target.day)}); return normalize([...rest,...out]);}
-function makeCustom(title:string,kind:Kind):Task{const clean=title.trim(); const idText=clean.toLowerCase().replace(/[^a-z0-9]+/g,"_").replace(/^_|_$/g,"").slice(0,38)||"custom"; const c={discipline:["Body","cyan",0,1,[4,16,34],[10,30,60],["Minimum version","Standard version","Deep version"]],reward:["Dopamine","violet",1,0,[0,0,0],[0,0,0],["5 min cap","10 min cap","15 min hard cap"]],recovery:["System","amber",0,0,[0,2,4],[8,16,24],["Tiny reset","Reset","Full reset"]],review:["System","silver",0,0,[0,0,0],[0,0,0],["12 hour review window","Strategic weekly review","Reseal checkpoint"]],pause:["System","silver",0,0,[0,0,0],[0,0,0],["Pause remaining day","Protect evening","Full stop"]]}[kind] as [Category,Accent,number,number,number[],number[],string[]]; const relief=kind==="reward"?[5,9,12]:kind==="recovery"?[12,20,30]:kind==="review"?[8,10,12]:kind==="pause"?[20,30,40]:[0,0,0]; return normalizeTask({id:`custom_${idText}_${Date.now().toString(36)}`,title:clean,icon:"sprite",kind,category:c[0],accent:c[1],tokenCost:c[2],tokenEarn:c[3],tiers:[1,2,3].map((l,i)=>({level:l as 1|2|3,label:c[6][i],minutes:kind==="pause"?0:[5,20,45][i],xp:c[5][i],tension:c[4][i],relief:relief[i]}))});}
+function makeCustom(title:string,kind:Kind):Task{const clean=title.trim(); const idText=clean.toLowerCase().replace(/[^a-z0-9]+/g,"_").replace(/^_|_$/g,"").slice(0,38)||"custom"; const c={discipline:["Body","cyan",0,1,[4,16,34],[10,30,60],["Minimum version","Standard version","Deep version"]],reward:["Dopamine","violet",1,0,[0,0,0],[0,0,0],["5 min cap","10 min cap","15 min hard cap"]],recovery:["System","amber",0,0,[0,2,4],[8,16,24],["Tiny reset","Reset","Full reset"]],review:["System","silver",0,0,[0,0,0],[0,0,0],["12 hour review window","Strategic weekly review","Reseal checkpoint"]],pause:["System","silver",0,0,[0,0,0],[0,0,0],["Pause remaining day","Protect evening","Full stop"]]}[kind] as [Category,Accent,number,number,number[],number[],string[]]; const relief=kind==="reward"?[5,9,12]:kind==="recovery"?[12,20,30]:kind==="review"?[8,10,12]:kind==="pause"?[20,30,40]:[0,0,0]; return normalizeTask({id:`custom_${idText}_${Date.now().toString(36)}`,title:clean,icon:"sprite",iconSpriteId:randomItemIconId(),kind,category:c[0],accent:c[1],tokenCost:c[2],tokenEarn:c[3],tiers:[1,2,3].map((l,i)=>({level:l as 1|2|3,label:c[6][i],minutes:kind==="pause"?0:[5,20,45][i],xp:c[5][i],tension:c[4][i],relief:relief[i]}))});}
 function downloadJson(name:string,data:unknown){const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"}); const url=URL.createObjectURL(blob); const a=document.createElement("a"); a.href=url; a.download=name; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);}
 function clearPlannerPersistence(){try{for(const key of Object.keys(localStorage)){if(key.startsWith("habit-planner-rpg-")&&key!==STORAGE_KEY)localStorage.removeItem(key);}}catch{}}
 function resetPlannerState(s:State):State{return{...s,activeView:"plan",blocks:[],player:normalizePlayer({level:1,xp:0,tokens:0,streakDays:0,streakState:"healthy",resetCount:s.player.resetCount+1}),week:{mode:"draft",daySeals:{}},selectedDay:"mon",weekStartIso:startOfWeekIso(),hidePastDays:false,planningView:"blocks",toast:"Full reset complete. Week cleared."};}
 function validateTask(x:any):Task{if(!x||typeof x!=="object")throw new Error("Invalid action."); if(!x.id||!x.title)throw new Error("Action needs id and title."); if(!["discipline","reward","recovery","review","pause"].includes(x.kind))throw new Error(`Invalid action kind: ${x.kind}`); if(typeof x.category==="string"&&!LEGACY_CATEGORY_MAP[x.category])throw new Error(`Invalid category: ${x.category}`); if(!Array.isArray(x.tiers)||x.tiers.length!==3)throw new Error(`${x.title} must have exactly 3 tiers.`); return normalizeTask({...x,icon:x.icon||"sprite"} as Task);}
-function validateBank(x:any):BankFile{if(!x||x.kind!=="habit-action-bank"||!x.tasks)throw new Error("Not an action bank file."); const tasks:Record<string,Task>={}; Object.values(x.tasks).forEach((v:any)=>{const t=validateTask(v); tasks[t.id]=t;}); return{schemaVersion:28,kind:"habit-action-bank",exportedAt:new Date().toISOString(),tasks};}
-function validatePlan(x:any):PlanFile{if(!x||!x.tasks||!Array.isArray(x.blocks))throw new Error("Invalid plan file."); const deletedTaskIds:string[]=Array.isArray(x.deletedTaskIds)?x.deletedTaskIds.filter((id:any):id is string=>typeof id==="string"):[]; const tasks:Record<string,Task>={}; Object.values({...tasksSeed,...x.tasks}).forEach((v:any)=>{const t=validateTask(v); tasks[t.id]=t;}); PINNED_SEED_TASK_IDS.forEach(id=>{if(tasksSeed[id])tasks[id]=tasksSeed[id];}); deletedTaskIds.forEach(id=>{if(tasks[id]&&!isSystemTask(tasks[id])&&!PINNED_SEED_TASK_IDS.has(id)) delete tasks[id];}); return{...baseState(),...x,schemaVersion:28,activeView:x.activeView==="today"?"today":"plan",tasks,deletedTaskIds,blocks:normalize(x.blocks.filter((b:Block)=>!!tasks[b.taskId])),player:normalizePlayer({...baseState().player,...x.player,resetCount:x.player?.resetCount||0}),week:{mode:x.week?.mode||"draft",sealedAt:x.week?.sealedAt,reviewOpenUntil:x.week?.reviewOpenUntil,emergencyReviewRequestedAt:x.week?.emergencyReviewRequestedAt,emergencyReviewUnlockAt:x.week?.emergencyReviewUnlockAt,daySeals:x.week?.daySeals||{}},weekStartIso:x.weekStartIso||startOfWeekIso(),hidePastDays:!!x.hidePastDays,planningView:x.planningView==="time"?"time":"blocks",timeFilter:x.timeFilter==="morning"||x.timeFilter==="afternoon"?x.timeFilter:"both",theme:x.theme==="light"?"light":"dark",audioMuted:!!x.audioMuted,exportedAt:new Date().toISOString()};}
+function validateBank(x:any):BankFile{if(!x||x.kind!=="habit-action-bank"||!x.tasks)throw new Error("Not an action bank file."); const tasks:Record<string,Task>={}; Object.values(x.tasks).forEach((v:any)=>{const t=validateTask(v); tasks[t.id]=t;}); return{schemaVersion:29,kind:"habit-action-bank",exportedAt:new Date().toISOString(),tasks};}
+function validatePlan(x:any):PlanFile{if(!x||!x.tasks||!Array.isArray(x.blocks))throw new Error("Invalid plan file."); const deletedTaskIds:string[]=Array.isArray(x.deletedTaskIds)?x.deletedTaskIds.filter((id:any):id is string=>typeof id==="string"):[]; const tasks:Record<string,Task>={}; Object.values({...tasksSeed,...x.tasks}).forEach((v:any)=>{const t=validateTask(v); tasks[t.id]=t;}); PINNED_SEED_TASK_IDS.forEach(id=>{if(tasksSeed[id])tasks[id]=tasksSeed[id];}); deletedTaskIds.forEach(id=>{if(tasks[id]&&!isSystemTask(tasks[id])&&!PINNED_SEED_TASK_IDS.has(id)) delete tasks[id];}); return{...baseState(),...x,schemaVersion:29,activeView:x.activeView==="today"?"today":"plan",tasks,deletedTaskIds,blocks:normalize(x.blocks.filter((b:Block)=>!!tasks[b.taskId])),player:normalizePlayer({...baseState().player,...x.player,resetCount:x.player?.resetCount||0}),week:{mode:x.week?.mode||"draft",sealedAt:x.week?.sealedAt,reviewOpenUntil:x.week?.reviewOpenUntil,emergencyReviewRequestedAt:x.week?.emergencyReviewRequestedAt,emergencyReviewUnlockAt:x.week?.emergencyReviewUnlockAt,daySeals:x.week?.daySeals||{}},weekStartIso:x.weekStartIso||startOfWeekIso(),hidePastDays:!!x.hidePastDays,planningView:x.planningView==="time"?"time":"blocks",timeFilter:x.timeFilter==="morning"||x.timeFilter==="afternoon"?x.timeFilter:"both",theme:x.theme==="light"?"light":"dark",audioMuted:!!x.audioMuted,exportedAt:new Date().toISOString()};}
 
 type DropTarget = {day:DayKey;beforeBlockId?:string;timeBand?:TimeBand;timeStart?:number};
 type Drag = {type:"task";taskId:string;x:number;y:number}|{type:"block";blockId:string;x:number;y:number};
@@ -461,7 +489,7 @@ function App(){
   function resizeTimeBlock(e:React.PointerEvent,b:Block){e.preventDefault(); e.stopPropagation(); if(!canEditDay(state,b.day)){setState(s=>({...s,toast:"Open Review before editing a sealed day."})); return;} const task=state.tasks[b.taskId]; if(task?.kind==="review"){setState(s=>({...s,toast:"Review windows are fixed at 12 hours."})); return;} const tier=task?getTier(task,b.tier):undefined; const base=calendarDuration(b,tier||{level:1,label:"",minutes:30,xp:0,tension:0,relief:0}); const startY=e.clientY; const frame=calendarFrame(state.timeFilter); const index=Math.max(0,dayBlocks(state.blocks,b.day).findIndex(x=>x.id===b.id)); const start=calendarStart(b,index); const maxEnd=Math.min(CAL_END,frame.end); const maxDuration=Math.max(MIN_EVENT_MINUTES,maxEnd-start); const onMove=(ev:PointerEvent)=>{const next=clamp(snap(base+(ev.clientY-startY)/CAL_PX_PER_MIN),MIN_EVENT_MINUTES,maxDuration); setState(s=>({...s,blocks:s.blocks.map(x=>x.id===b.id?{...x,timeMinutes:next}:x)}));}; const onUp=()=>{window.removeEventListener("pointermove",onMove); window.removeEventListener("pointerup",onUp);}; window.addEventListener("pointermove",onMove); window.addEventListener("pointerup",onUp);}
   function startDrag(e:React.PointerEvent,d:Drag){e.preventDefault(); e.stopPropagation(); playSfx("tick"); (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId); setDrag({...d,x:e.clientX,y:e.clientY});}
   function addCustom(){const title=newTitle.trim(); if(!title){playSfx("error"); setState(s=>({...s,toast:"Name the action first."})); return;} const t=makeCustom(title,newKind); playSfx("edit"); setState(s=>({...s,tasks:{...s.tasks,[t.id]:t},toast:"Action added."})); setEditingTaskId(t.id); setNewTitle(""); setShowAdd(false);}
-  function editBankAction(taskId:string,change:{category?:Category;kind?:Kind}){playSfx("edit"); setState(s=>{const task=s.tasks[taskId]; if(!task)return s; if(isSystemTask(task))return{...s,toast:"System actions cannot be edited."}; const nextKind=change.kind||task.kind; const nextCategory=change.category||task.category; const tuned=nextKind!==task.kind?makeCustom(task.title,nextKind):task; const updated=normalizeTask({...task,...tuned,id:task.id,title:task.title,kind:nextKind,category:nextCategory,accent:categoryAccent(nextCategory)}); return{...s,tasks:{...s.tasks,[taskId]:updated},toast:"Action updated."};});}
+  function editBankAction(taskId:string,change:{category?:Category;kind?:Kind}){playSfx("edit"); setState(s=>{const task=s.tasks[taskId]; if(!task)return s; if(isSystemTask(task))return{...s,toast:"System actions cannot be edited."}; const nextKind=change.kind||task.kind; const nextCategory=change.category||task.category; const tuned=nextKind!==task.kind?makeCustom(task.title,nextKind):task; const updated=normalizeTask({...task,...tuned,id:task.id,title:task.title,iconSpriteId:task.iconSpriteId||tuned.iconSpriteId,kind:nextKind,category:nextCategory,accent:categoryAccent(nextCategory)}); return{...s,tasks:{...s.tasks,[taskId]:updated},toast:"Action updated."};});}
   function sealDay(day:DayKey){playSfx(state.week.daySeals[day]?"error":"seal"); patch(s=>{if(s.week.daySeals[day])return{...s,toast:"Day already sealed."}; const sealedBlocks=s.blocks.map(b=>b.day===day?{...b,sealed:true}:b); const next={...s,blocks:sealedBlocks,week:{...s.week,daySeals:{...s.week.daySeals,[day]:{sealedAt:new Date().toISOString()}}}}; return{...next,toast:"Day sealed. Add a Review block manually if you want a review window."};});}
   function unsealDay(day:DayKey){playSfx(state.week.mode==="reviewOpen"&&state.week.daySeals[day]?"review":"error"); patch(s=>{if(!s.week.daySeals[day])return{...s,toast:"That day is not sealed."}; if(s.week.mode!=="reviewOpen")return{...s,toast:"Open a Review block before unsealing."}; const seals={...s.week.daySeals}; delete seals[day]; const hasSeals=DAYS.some(d=>!!seals[d]); const week=hasSeals?{...s.week,daySeals:seals}:{...s.week,mode:"draft" as Mode,sealedAt:undefined,reviewOpenUntil:undefined,emergencyReviewRequestedAt:undefined,emergencyReviewUnlockAt:undefined,daySeals:seals}; return{...s,week,blocks:s.blocks.map(b=>b.day===day?{...b,sealed:false}:b),toast:"Day unsealed."};});}
   function sealWeek(){playSfx(canSeal(r,state.week)?"seal":"error"); patch(s=>{const rr=report(s.blocks,s.tasks); if(!canSeal(rr,s.week))return{...s,toast:rr.sealDisabledReason||"Cannot seal yet."}; const daySeals=DAYS.reduce((a,d)=>({...a,[d]:{sealedAt:new Date().toISOString()}}),{} as Partial<Record<DayKey,DaySeal>>); const next={...s,week:{mode:"sealed" as Mode,sealedAt:new Date().toISOString(),daySeals},blocks:s.blocks.map(b=>({...b,sealed:true}))}; return{...next,toast:"Week sealed. Add a Review block manually if you want a review window."};});}
@@ -479,8 +507,8 @@ function App(){
   async function importPlan(file?:File){if(!file)return; try{const parsed=validatePlan(JSON.parse(await file.text())); playSfx("open"); setState({...parsed,toast:"Plan imported."});}catch(e){playSfx("error"); setState(s=>({...s,toast:e instanceof Error?e.message:"Plan import failed."}));}}
   async function importBank(file?:File){if(!file)return; try{const bank=validateBank(JSON.parse(await file.text())); const importedIds=Object.keys(bank.tasks); playSfx("open"); setState(s=>({...s,tasks:{...s.tasks,...bank.tasks},deletedTaskIds:s.deletedTaskIds.filter(id=>!importedIds.includes(id)),toast:`Action bank imported (${importedIds.length}).`}));}catch(e){playSfx("error"); setState(s=>({...s,toast:e instanceof Error?e.message:"Action bank import failed."}));}}
   function exportPlan(){playSfx("open"); downloadJson(`habit-plan-${new Date().toISOString().slice(0,10)}.json`,{...state,exportedAt:new Date().toISOString(),toast:undefined}); setState(s=>({...s,toast:"Plan exported."}));}
-  function exportBank(){playSfx("open"); downloadJson(`habit-action-bank-${new Date().toISOString().slice(0,10)}.json`,{schemaVersion:28,kind:"habit-action-bank",exportedAt:new Date().toISOString(),tasks:state.tasks}); setState(s=>({...s,toast:"Action bank exported."}));}
-  function exportTemplate(){playSfx("open"); downloadJson("habit-action-bank-template.json",{schemaVersion:28,kind:"habit-action-bank",exportedAt:new Date().toISOString(),tasks:{example_custom_action:makeCustom("Example Custom Action","discipline")}}); setState(s=>({...s,toast:"Template downloaded."}));}
+  function exportBank(){playSfx("open"); downloadJson(`habit-action-bank-${new Date().toISOString().slice(0,10)}.json`,{schemaVersion:29,kind:"habit-action-bank",exportedAt:new Date().toISOString(),tasks:state.tasks}); setState(s=>({...s,toast:"Action bank exported."}));}
+  function exportTemplate(){playSfx("open"); downloadJson("habit-action-bank-template.json",{schemaVersion:29,kind:"habit-action-bank",exportedAt:new Date().toISOString(),tasks:{example_custom_action:makeCustom("Example Custom Action","discipline")}}); setState(s=>({...s,toast:"Template downloaded."}));}
   function starter(){if(state.blocks.length){playSfx("error"); setState(s=>({...s,toast:"Starter only works on a blank week."})); return;} playSfx("drop"); const starter:[DayKey,string][]=[["mon","drink_water"],["mon","pushups"],["mon","bring_lunch"],["tue","avena_walk"],["tue","plank"],["tue","doomscroll"],["wed","fasting"],["wed","weight_lifting"],["thu","skip_oxxo"],["thu","tidy_room"],["fri","bike_cardio"],["fri","game"],["sun","review"]]; let blocks:Block[]=[]; for(const [d,id] of starter){const task=state.tasks[id]; if(task) blocks.push(makeBlock(task,d,nextOrder(blocks,d)));} setState(s=>({...s,blocks:normalize(blocks),toast:blocks.length?"Starter week added.":"Starter actions were removed from the bank."}));}
   function fullWipe(){playSfx("reset"); clearPlannerPersistence(); setDrag(null); setExpanded(null); setPopover(null); setMenu(false); setResetConfirm(false); setEditingTaskId(null); setState(s=>{const next=resetPlannerState(s); try{localStorage.setItem(STORAGE_KEY,JSON.stringify({...next,toast:undefined}));}catch{} return next;});}
   function removeBankAction(taskId:string){playSfx("edit"); if(editingTaskId===taskId)setEditingTaskId(null); setState(s=>{const task=s.tasks[taskId]; if(!task)return s; if(isSystemTask(task))return{...s,toast:"System actions cannot be deleted."}; const nextTasks={...s.tasks}; delete nextTasks[taskId]; const removedBlocks=s.blocks.filter(b=>b.taskId===taskId).length; const nextBlocks=normalize(s.blocks.filter(b=>b.taskId!==taskId)); const deletedTaskIds=Array.from(new Set([...(s.deletedTaskIds||[]),taskId])); return {...s,tasks:nextTasks,deletedTaskIds,blocks:nextBlocks,toast:removedBlocks?`Deleted ${task.title} and ${removedBlocks} planned block${removedBlocks===1?"":"s"}.`:`Deleted ${task.title}.`};});}

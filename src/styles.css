@@ -3750,3 +3750,661 @@ button:disabled {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+/* Asset system v13: generated atlas foundation and premium planner composition. */
+body {
+  background:
+    radial-gradient(90% 70% at 12% 0%, rgba(67, 214, 206, .16), transparent 56%),
+    radial-gradient(80% 76% at 100% 12%, rgba(255, 192, 92, .13), transparent 58%),
+    linear-gradient(180deg, #07100f, #050707 58%, #070604);
+}
+
+:root[data-theme="light"] body {
+  background:
+    radial-gradient(76% 62% at 10% 0%, rgba(52, 176, 190, .15), transparent 56%),
+    radial-gradient(86% 70% at 96% 8%, rgba(223, 166, 73, .17), transparent 60%),
+    linear-gradient(180deg, #f3f7f1, #e7efe9);
+}
+
+.app-shell {
+  gap: 12px;
+  padding: clamp(10px, 1.2vw, 16px);
+}
+
+.app-shell::before {
+  background-image:
+    linear-gradient(180deg, rgba(3, 8, 10, .18), rgba(3, 5, 5, .54)),
+    var(--asset-panel-dark);
+  background-size: cover;
+  background-position: center;
+  opacity: .72;
+  filter: saturate(1.05) contrast(1.04);
+}
+
+.app-shell::after {
+  background:
+    radial-gradient(circle at 9% 12%, rgba(117, 244, 255, .12), transparent 22%),
+    radial-gradient(circle at 92% 18%, rgba(255, 209, 102, .10), transparent 20%),
+    radial-gradient(circle at 60% 104%, rgba(84, 255, 169, .08), transparent 24%),
+    linear-gradient(90deg, rgba(255, 209, 102, .06), transparent 18%, transparent 82%, rgba(117, 244, 255, .07)),
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, .018) 0 1px, transparent 1px 112px);
+  opacity: .9;
+}
+
+:root[data-theme="light"] .app-shell::before {
+  background-image:
+    linear-gradient(180deg, rgba(255, 255, 255, .48), rgba(247, 250, 244, .78)),
+    var(--asset-panel-light);
+  opacity: .86;
+  filter: saturate(.88) contrast(.98);
+}
+
+.glass-panel {
+  border-color: rgba(223, 197, 124, .17);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, .085), rgba(255, 255, 255, .024)),
+    linear-gradient(135deg, rgba(31, 108, 108, .14), rgba(118, 77, 33, .06)),
+    rgba(7, 11, 12, .74);
+  box-shadow:
+    0 24px 70px rgba(0, 0, 0, .42),
+    0 1px 0 rgba(255, 255, 255, .08) inset,
+    0 0 0 1px rgba(117, 244, 255, .035) inset;
+}
+
+.glass-panel::before {
+  opacity: .20;
+  mix-blend-mode: soft-light;
+}
+
+.glass-panel::after {
+  border-color: rgba(223, 197, 124, .10);
+  background:
+    linear-gradient(90deg, rgba(255, 209, 102, .14), transparent 16%, transparent 84%, rgba(117, 244, 255, .13)),
+    linear-gradient(180deg, rgba(255, 255, 255, .10), transparent 18%, transparent 82%, rgba(255, 255, 255, .05));
+  opacity: .48;
+}
+
+:root[data-theme="light"] .glass-panel {
+  border-color: rgba(126, 99, 44, .18);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, .80), rgba(247, 251, 246, .58)),
+    rgba(255, 255, 255, .76);
+  box-shadow: 0 22px 60px rgba(66, 82, 73, .14), inset 0 1px 0 rgba(255, 255, 255, .72);
+}
+
+.sprite-icon {
+  background-size: 600% 600%;
+  filter: drop-shadow(0 0 7px rgba(117, 244, 255, .22)) drop-shadow(0 3px 7px rgba(0, 0, 0, .22));
+}
+
+.sprite-icon.sprite-items,
+.sprite-icon.item-sprite {
+  background-size: 800% 800%;
+  filter: drop-shadow(0 0 9px rgba(255, 209, 102, .20)) drop-shadow(0 3px 8px rgba(0, 0, 0, .30));
+}
+
+.sprite-icon.sprite-effects,
+.sprite-icon.sprite-ornaments {
+  background-size: 400% 400%;
+}
+
+.topbar {
+  min-height: 72px;
+  grid-template-columns: minmax(176px, auto) minmax(220px, 1fr) auto;
+  padding: 10px 12px;
+}
+
+.topbar::after {
+  inset: auto 12px -34px auto;
+  width: 172px;
+  height: 92px;
+  border: 0;
+  background-image: var(--asset-ornaments-sprite);
+  background-size: 400% 400%;
+  background-position: 100% 100%;
+  background-repeat: no-repeat;
+  opacity: .22;
+  filter: drop-shadow(0 0 18px rgba(117, 244, 255, .18));
+}
+
+.brand {
+  gap: 12px;
+  padding-left: 0;
+}
+
+.brand-mark {
+  width: 50px;
+  height: 50px;
+  background-image: var(--asset-planner-mark);
+  background-size: contain;
+  background-position: center;
+  background-repeat: no-repeat;
+  filter: drop-shadow(0 0 18px rgba(255, 209, 102, .23)) drop-shadow(0 0 12px rgba(117, 244, 255, .18));
+}
+
+.brand-copy strong {
+  font-size: 15px;
+  font-weight: 900;
+}
+
+.top-status .top-chip,
+.xp-status,
+.week-nav-cluster,
+.week-action-cluster,
+.view-cluster,
+.time-filter-cluster {
+  border-color: rgba(223, 197, 124, .12);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, .075), rgba(255, 255, 255, .026)),
+    rgba(0, 0, 0, .18);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .08);
+}
+
+.xp-status i {
+  height: 8px;
+  border: 1px solid rgba(255, 255, 255, .08);
+  background: rgba(0, 0, 0, .24);
+}
+
+.xp-status i em {
+  background:
+    linear-gradient(90deg, rgba(117, 244, 255, .95), rgba(84, 255, 169, .92) 48%, rgba(255, 209, 102, .96)),
+    radial-gradient(circle at 90% 50%, rgba(255, 255, 255, .88), transparent 20%);
+  box-shadow: 0 0 18px rgba(84, 255, 169, .34), 0 0 10px rgba(255, 209, 102, .22);
+}
+
+.workspace.plan-workspace {
+  min-height: 0;
+}
+
+@media (min-width: 1080px) {
+  .workspace.plan-workspace {
+    grid-template-columns: clamp(280px, 23vw, 360px) minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr);
+    align-items: stretch;
+  }
+
+  .action-bank {
+    order: 1;
+    min-height: 0;
+    grid-template-rows: auto auto auto auto auto auto minmax(0, 1fr);
+  }
+
+  .week-panel {
+    order: 2;
+  }
+
+  .bank-strip {
+    flex-direction: column;
+    overflow-x: hidden;
+    overflow-y: auto;
+    padding-right: 3px;
+    padding-bottom: 0;
+  }
+
+  .bank-card {
+    width: 100%;
+    flex: 0 0 auto;
+  }
+}
+
+.action-bank,
+.week-panel,
+.today-panel {
+  padding: 12px;
+}
+
+.action-bank::after {
+  inset: auto auto -22px -18px;
+  width: 134px;
+  height: 134px;
+  border: 0;
+  background-image: var(--asset-ornaments-sprite);
+  background-size: 400% 400%;
+  background-position: 0 0;
+  background-repeat: no-repeat;
+  opacity: .16;
+  filter: drop-shadow(0 0 20px rgba(255, 209, 102, .20));
+}
+
+.week-panel::after {
+  inset: -26px -34px auto auto;
+  width: 170px;
+  height: 112px;
+  border: 0;
+  background-image: var(--asset-ornaments-sprite);
+  background-size: 400% 400%;
+  background-position: 33.333% 0;
+  background-repeat: no-repeat;
+  opacity: .13;
+  transform: rotate(2deg);
+}
+
+.bank-card,
+.block-card,
+.today-current,
+.queue-line,
+.day-column,
+.calendar-day-head-card.day-head,
+.calendar-day-lane {
+  border-color: rgba(223, 197, 124, .12);
+}
+
+.bank-card {
+  min-height: 82px;
+  grid-template-columns: 54px minmax(0, 1fr) auto;
+  padding: 10px 11px;
+  background:
+    radial-gradient(80% 90% at 8% 8%, rgba(117, 244, 255, .13), transparent 52%),
+    linear-gradient(145deg, rgba(255, 255, 255, .08), rgba(255, 255, 255, .025)),
+    rgba(6, 9, 10, .72);
+}
+
+.bank-card::after {
+  content: "";
+  position: absolute;
+  inset: auto 7px 7px auto;
+  width: 34px;
+  height: 34px;
+  pointer-events: none;
+  background-image: var(--asset-effects-sprite);
+  background-size: 400% 400%;
+  background-position: 33.333% 33.333%;
+  background-repeat: no-repeat;
+  opacity: .13;
+  filter: saturate(1.1);
+}
+
+.bank-card:hover,
+.bank-card.editing {
+  transform: translateY(-1px);
+  border-color: rgba(117, 244, 255, .30);
+  box-shadow: 0 18px 38px rgba(0, 0, 0, .30), 0 0 28px rgba(117, 244, 255, .10);
+}
+
+.bank-icon,
+.block-icon,
+.mini-card span,
+.queue-line span,
+.today-current-icon,
+.bank-editor-head span {
+  border-color: rgba(223, 197, 124, .15);
+  background:
+    radial-gradient(circle at 34% 22%, rgba(255, 255, 255, .20), transparent 28%),
+    linear-gradient(180deg, rgba(255, 255, 255, .11), rgba(255, 255, 255, .035)),
+    rgba(0, 0, 0, .20);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, .13),
+    0 0 0 1px rgba(117, 244, 255, .035),
+    0 8px 16px rgba(0, 0, 0, .22);
+}
+
+.bank-icon {
+  width: 52px;
+  height: 52px;
+}
+
+.bank-icon .sprite-icon {
+  width: 42px;
+  height: 42px;
+}
+
+.block-card {
+  min-height: 74px;
+  padding: 12px 12px 12px 14px;
+  border-radius: 8px;
+  background:
+    radial-gradient(78% 85% at 9% 0%, rgba(117, 244, 255, .12), transparent 54%),
+    linear-gradient(135deg, rgba(255, 255, 255, .085), rgba(255, 255, 255, .024)),
+    rgba(7, 10, 11, .86);
+  box-shadow: 0 14px 30px rgba(0, 0, 0, .28), inset 0 1px 0 rgba(255, 255, 255, .075);
+}
+
+.block-card::after {
+  content: "";
+  position: absolute;
+  inset: auto 4px 2px auto;
+  width: 54px;
+  height: 54px;
+  pointer-events: none;
+  background-image: var(--asset-effects-sprite);
+  background-size: 400% 400%;
+  background-position: 66.666% 66.666%;
+  background-repeat: no-repeat;
+  opacity: .045;
+  mix-blend-mode: screen;
+}
+
+.block-card.done {
+  border-color: rgba(84, 255, 169, .22);
+  box-shadow: 0 14px 30px rgba(0, 0, 0, .24), 0 0 24px rgba(84, 255, 169, .08), inset 0 1px 0 rgba(255, 255, 255, .08);
+}
+
+.block-card.done::after {
+  background-position: 66.666% 66.666%;
+  opacity: .22;
+}
+
+.block-card.missed::after {
+  background-position: 100% 66.666%;
+  opacity: .18;
+}
+
+.block-card.recoveryDue::after,
+.block-card.recovery::after {
+  background-position: 66.666% 33.333%;
+  opacity: .18;
+}
+
+.block-icon,
+.day-column.sealed .block-icon {
+  width: 44px;
+  height: 44px;
+}
+
+.block-icon .sprite-icon {
+  width: 36px;
+  height: 36px;
+}
+
+.day-column {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, .055), rgba(255, 255, 255, .014)),
+    radial-gradient(80% 68% at 50% 0%, rgba(117, 244, 255, .045), transparent 64%),
+    rgba(3, 7, 8, .30);
+}
+
+.day-column.today {
+  border-color: rgba(117, 244, 255, .44);
+  box-shadow: inset 0 0 0 1px rgba(117, 244, 255, .12), 0 0 30px rgba(117, 244, 255, .10);
+}
+
+.day-column.selected {
+  border-color: rgba(255, 209, 102, .34);
+  box-shadow: inset 0 0 0 1px rgba(255, 209, 102, .10), 0 0 24px rgba(255, 209, 102, .07);
+}
+
+.day-head,
+.calendar-day-head-card.day-head {
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.026)),
+    rgba(5, 10, 11, .52);
+}
+
+.day-orb {
+  position: relative;
+  overflow: hidden;
+}
+
+.day-orb::after {
+  content: "";
+  position: absolute;
+  inset: -12px;
+  background-image: var(--asset-effects-sprite);
+  background-size: 400% 400%;
+  background-position: 33.333% 33.333%;
+  opacity: .22;
+  mix-blend-mode: screen;
+}
+
+.equilibrium {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, .07), rgba(255, 255, 255, .022)),
+    rgba(0, 0, 0, .18);
+}
+
+.calendar-grid-shell {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, .035), rgba(255, 255, 255, .014)),
+    rgba(0, 0, 0, .10);
+}
+
+.calendar-day-lane {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, .035), rgba(255, 255, 255, .01)),
+    rgba(0, 0, 0, .08);
+}
+
+.calendar-beam {
+  filter: drop-shadow(0 0 12px rgba(117, 244, 255, .22));
+}
+
+.calendar-beam::before,
+.calendar-beam::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  pointer-events: none;
+  background-image: var(--asset-effects-sprite);
+  background-size: 400% 400%;
+  background-repeat: no-repeat;
+  mix-blend-mode: screen;
+}
+
+.calendar-beam::before {
+  left: -30px;
+  width: 64px;
+  height: 64px;
+  transform: translateY(-50%);
+  background-position: 33.333% 0;
+  opacity: .58;
+}
+
+.calendar-beam::after {
+  right: -44px;
+  width: 86px;
+  height: 86px;
+  transform: translateY(-50%);
+  background-position: 100% 100%;
+  opacity: .62;
+}
+
+.calendar-beam.has-target::after {
+  background-position: 33.333% 0;
+  opacity: .84;
+}
+
+.calendar-beam .beam-core {
+  height: 3px;
+  background:
+    linear-gradient(90deg, transparent, rgba(117, 244, 255, .96), rgba(255, 255, 255, .92), rgba(255, 209, 102, .82), transparent);
+  box-shadow: 0 0 16px rgba(117, 244, 255, .48), 0 0 34px rgba(255, 209, 102, .18);
+}
+
+.calendar-beam .beam-aura {
+  height: 18px;
+  background: linear-gradient(90deg, transparent, rgba(117, 244, 255, .20), rgba(255, 209, 102, .14), transparent);
+  filter: blur(4px);
+}
+
+.beam-hit .block-icon,
+.beam-hit-shell .block-icon {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, .18),
+    0 0 0 1px rgba(117, 244, 255, .24),
+    0 0 24px rgba(117, 244, 255, .34),
+    0 0 16px rgba(255, 209, 102, .16);
+}
+
+.completion-burst {
+  pointer-events: none;
+  z-index: 9998;
+}
+
+.completion-burst::before,
+.completion-burst::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 150px;
+  height: 150px;
+  transform: translate(-50%, -50%);
+  background-image: var(--asset-effects-sprite);
+  background-size: 400% 400%;
+  background-repeat: no-repeat;
+  mix-blend-mode: screen;
+}
+
+.completion-burst::before {
+  background-position: 0 0;
+  opacity: .78;
+  animation: atlasBurst 900ms ease-out forwards;
+}
+
+.completion-burst::after {
+  width: 112px;
+  height: 112px;
+  background-position: 100% 0;
+  opacity: .62;
+  animation: atlasBurst 980ms ease-out forwards reverse;
+}
+
+.completion-burst.auto::before { background-position: 66.666% 0; }
+.completion-burst.auto::after { background-position: 66.666% 33.333%; }
+.completion-burst.level::before { background-position: 33.333% 100%; }
+.completion-burst.level::after { background-position: 100% 0; }
+
+.completion-burst span {
+  background: radial-gradient(circle, rgba(255, 246, 196, .98), rgba(255, 209, 102, .72) 42%, transparent 72%);
+  box-shadow: 0 0 12px rgba(255, 209, 102, .55);
+}
+
+@keyframes atlasBurst {
+  0% { transform: translate(-50%, -50%) scale(.42) rotate(-8deg); opacity: 0; }
+  18% { opacity: .88; }
+  100% { transform: translate(-50%, -50%) scale(1.22) rotate(10deg); opacity: 0; }
+}
+
+.xp-float {
+  border: 1px solid rgba(255, 209, 102, .20);
+  background:
+    radial-gradient(circle at 20% 0%, rgba(255, 246, 196, .18), transparent 46%),
+    rgba(7, 10, 10, .74);
+  box-shadow: 0 14px 32px rgba(0,0,0,.28), 0 0 28px rgba(255, 209, 102, .12);
+  backdrop-filter: blur(10px) saturate(130%);
+}
+
+.today-panel {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, .07), rgba(255, 255, 255, .018)),
+    rgba(6, 11, 12, .68);
+}
+
+.today-current {
+  background:
+    radial-gradient(64% 88% at 12% 0%, rgba(117, 244, 255, .15), transparent 56%),
+    linear-gradient(135deg, rgba(255, 255, 255, .09), rgba(255, 255, 255, .025)),
+    rgba(6, 10, 11, .66);
+}
+
+:root[data-theme="light"] .bank-card,
+:root[data-theme="light"] .block-card,
+:root[data-theme="light"] .today-current,
+:root[data-theme="light"] .queue-line,
+:root[data-theme="light"] .day-column,
+:root[data-theme="light"] .calendar-day-lane {
+  background:
+    radial-gradient(76% 80% at 8% 0%, rgba(64, 207, 220, .08), transparent 54%),
+    linear-gradient(180deg, rgba(255,255,255,.94), rgba(247,250,246,.78));
+  box-shadow: 0 12px 28px rgba(66, 82, 73, .10), inset 0 1px 0 rgba(255,255,255,.70);
+}
+
+:root[data-theme="light"] .top-status .top-chip,
+:root[data-theme="light"] .xp-status,
+:root[data-theme="light"] .week-nav-cluster,
+:root[data-theme="light"] .week-action-cluster,
+:root[data-theme="light"] .view-cluster,
+:root[data-theme="light"] .time-filter-cluster,
+:root[data-theme="light"] .equilibrium {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, .88), rgba(247, 251, 246, .58)),
+    rgba(255,255,255,.62);
+  border-color: rgba(126, 99, 44, .13);
+}
+
+@media (max-width: 860px) {
+  html,
+  body,
+  #root {
+    height: auto;
+    min-height: 100%;
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+
+  .app-shell {
+    height: auto;
+    min-height: 100dvh;
+    max-height: none;
+    grid-template-rows: auto auto auto;
+    overflow: visible;
+  }
+
+  .workspace,
+  .workspace.plan-workspace {
+    overflow: visible;
+  }
+
+  .plan-workspace {
+    grid-template-rows: auto auto;
+  }
+
+  .topbar {
+    grid-template-columns: 1fr;
+    gap: 9px;
+  }
+
+  .topbar::after {
+    right: -48px;
+    bottom: 4px;
+    opacity: .08;
+    transform: scale(.86);
+  }
+
+  .top-status,
+  .top-actions {
+    width: 100%;
+    justify-content: flex-start;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .top-actions {
+    scrollbar-width: none;
+  }
+
+  .top-status::-webkit-scrollbar,
+  .top-actions::-webkit-scrollbar {
+    display: none;
+  }
+
+  .brand-mark {
+    width: 44px;
+    height: 44px;
+  }
+
+  .bank-card {
+    flex-basis: 190px;
+  }
+
+  .week-panel {
+    min-height: 680px;
+  }
+
+  .week-scroll {
+    max-height: 520px;
+  }
+
+  .action-bank {
+    min-height: 310px;
+    max-height: none;
+  }
+
+  .bottom-nav {
+    position: sticky;
+    bottom: calc(8px + var(--safe-bottom));
+    z-index: 220;
+  }
+}
