@@ -369,3 +369,139 @@
 :root[data-theme="light"] .calendar-beam span {
   background: rgba(255,255,255,.84);
 }
+  padding: 0;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  overflow: visible;
+}
+
+.calendar-day-head::after {
+  display: none;
+}
+
+.calendar-day-head-card.day-head {
+  min-height: 72px;
+  padding: 10px 12px;
+  border: 1px solid rgba(255, 255, 255, .08);
+  border-radius: 14px;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.065), rgba(255,255,255,.025)),
+    rgba(8, 10, 12, .38);
+  box-shadow: 0 10px 26px rgba(0,0,0,.16), inset 0 1px 0 rgba(255,255,255,.08);
+}
+
+.calendar-day-head.today .calendar-day-head-card {
+  border-color: rgba(117, 244, 255, .18);
+}
+
+.calendar-day-head.sealed .calendar-day-head-card {
+  border-color: rgba(255, 209, 102, .16);
+}
+
+.calendar-day-head .day-orb {
+  width: 36px;
+  height: 36px;
+}
+
+.calendar-day-head button {
+  min-height: 32px;
+}
+
+.calendar-day-head span {
+  display: none;
+}
+
+.calendar-day-lane {
+  overflow: visible;
+}
+
+.seal-threefx {
+  inset: -8px -10px;
+  overflow: visible;
+  opacity: .84;
+  z-index: 0;
+}
+
+.seal-threefx canvas {
+  filter: saturate(1.04) blur(.1px);
+}
+
+.calendar-day-lane > *,
+.day-column > * {
+  position: relative;
+  z-index: 1;
+}
+
+.calendar-event-shell .block-card.time-card {
+  padding: 7px 8px 18px 10px;
+}
+
+.calendar-event-shell .block-main {
+  grid-template-columns: 28px minmax(0, 1fr);
+  gap: 7px;
+}
+
+.calendar-event-shell .block-icon {
+  width: 28px;
+  height: 28px;
+}
+
+.calendar-event-shell .block-icon .sprite-icon {
+  width: 22px;
+  height: 22px;
+}
+
+.calendar-event-shell .system-badge {
+  display: none;
+}
+
+.calendar-event-shell .block-copy {
+  gap: 2px;
+}
+
+.calendar-event-shell .block-title-row strong {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.calendar-event-shell.compact-event .status-pill,
+.calendar-event-shell.compact-event .block-copy small,
+.calendar-event-shell.micro-event .status-pill,
+.calendar-event-shell.micro-event .kind-pill,
+.calendar-event-shell.micro-event .block-copy small {
+  display: none;
+}
+
+.calendar-event-shell.micro-event .drag-handle {
+  opacity: .36;
+}
+
+:root[data-theme="light"] .calendar-day-head-card.day-head {
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.98), rgba(247,250,255,.90)),
+    rgba(255,255,255,.82);
+}
+
+:root[data-theme="light"] .day-column.sealed,
+:root[data-theme="light"] .calendar-day-lane.sealed {
+  box-shadow: inset 0 0 0 1px rgba(214, 162, 30, .05), 0 8px 20px rgba(214, 162, 30, .04);
+}
+  gap: 0;
+  text-align: left;
+}
+
+.calendar-day-head-card.day-head {
+  width: 100%;
+}
+
+.calendar-day-head-card.day-head strong {
+  font-size: 14px;
+  letter-spacing: .04em;
+}
+
+.calendar-day-head-card.day-head small {
+  font-size: 11px;
+}
