@@ -4408,3 +4408,129 @@ body {
     z-index: 220;
   }
 }
+
+/* Restore the original atmospheric backdrop while keeping the generated atlas UI. */
+body {
+  background:
+    linear-gradient(160deg, rgba(255, 209, 102, .10), transparent 36%),
+    linear-gradient(25deg, rgba(117, 244, 255, .09), transparent 42%),
+    linear-gradient(180deg, var(--bg1), var(--bg0));
+}
+
+:root[data-theme="light"] body {
+  background:
+    linear-gradient(160deg, rgba(255, 209, 102, .16), transparent 36%),
+    linear-gradient(25deg, rgba(84, 255, 169, .12), transparent 42%),
+    linear-gradient(180deg, var(--bg1), var(--bg0));
+}
+
+.app-shell::before {
+  background-image: var(--asset-ambient-mist);
+  background-size: cover;
+  background-position: center;
+  opacity: .20;
+  filter: saturate(.92) contrast(1.08);
+}
+
+:root[data-theme="light"] .app-shell::before {
+  background-image: var(--asset-ambient-mist);
+  opacity: .16;
+  filter: saturate(.8) contrast(.92);
+}
+
+.app-shell::after {
+  background:
+    linear-gradient(90deg, rgba(255, 209, 102, .08), transparent 16%, transparent 84%, rgba(117, 244, 255, .08)),
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, .025) 0 1px, transparent 1px 96px);
+  opacity: 1;
+  mask-image: linear-gradient(180deg, transparent, #000 10%, #000 90%, transparent);
+}
+
+.glass-panel {
+  border-color: var(--line);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, .09), rgba(255, 255, 255, .025)),
+    var(--panel);
+  box-shadow: var(--shadow), inset 0 1px 0 rgba(255, 255, 255, .09);
+  backdrop-filter: blur(18px) saturate(135%);
+}
+
+.glass-panel::before {
+  background-image: var(--asset-panel-dark);
+  background-size: cover;
+  background-position: center;
+  opacity: .14;
+  filter: saturate(.85) contrast(.9);
+  mix-blend-mode: normal;
+}
+
+.glass-panel::after {
+  inset: 1px;
+  border-color: rgba(117, 244, 255, .08);
+  background:
+    linear-gradient(90deg, rgba(255, 209, 102, .12), transparent 18%, transparent 82%, rgba(117, 244, 255, .12)),
+    linear-gradient(180deg, rgba(255, 255, 255, .07), transparent 20%, transparent 80%, rgba(255, 255, 255, .05));
+  opacity: .42;
+}
+
+:root[data-theme="light"] .glass-panel {
+  border-color: var(--line);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, .72), rgba(255, 255, 255, .32)),
+    var(--panel);
+  box-shadow: var(--shadow), inset 0 1px 0 rgba(255, 255, 255, .09);
+}
+
+:root[data-theme="light"] .glass-panel::before {
+  background-image: var(--asset-panel-light);
+  opacity: .18;
+  filter: saturate(.7) contrast(.82);
+}
+
+.sprite-icon {
+  background-repeat: no-repeat;
+  background-size: 600% 600%;
+  background-position: var(--sprite-x) var(--sprite-y);
+  image-rendering: auto;
+  transform: translateZ(0);
+}
+
+.sprite-icon.sprite-items,
+.sprite-icon.item-sprite {
+  background-size: 800% 800%;
+}
+
+.sprite-icon.sprite-effects,
+.sprite-icon.sprite-ornaments {
+  background-size: 400% 400%;
+}
+
+.bank-icon,
+.block-icon,
+.today-current-icon,
+.mini-card span,
+.queue-line span,
+.bank-editor-head span,
+.bank-editor-section button .sprite-icon {
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+}
+
+.bank-icon .sprite-icon {
+  width: 44px;
+  height: 44px;
+}
+
+.block-icon .sprite-icon,
+.today-current-icon .sprite-icon,
+.mini-card .sprite-icon {
+  width: 38px;
+  height: 38px;
+}
+
+.calendar-event-shell .block-icon .sprite-icon,
+.calendar-day-lane.sealed .block-card.time-card .block-icon .sprite-icon {
+  width: 24px;
+  height: 24px;
+}
